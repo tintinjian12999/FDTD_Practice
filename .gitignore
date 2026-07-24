@@ -6,6 +6,7 @@ __pycache__/
 .pytest_cache/
 build/
 output/
+.worktrees/
 CMakeUserPresets.json
 ufdtd.pdf
 .vscode/
