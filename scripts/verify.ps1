@@ -48,18 +48,21 @@ try {
         Invoke-InEnvironment -Conda $conda -Arguments @(
             'cmake', '--build', '--preset', $preset
         )
+        if (Test-Path -LiteralPath 'output\smoke\signal.csv') {
+            Remove-Item -LiteralPath 'output\smoke\signal.csv' -Force
+        }
         Invoke-InEnvironment -Conda $conda -Arguments @(
             'ctest', '--preset', $preset
+        )
+        Invoke-InEnvironment -Conda $conda -Arguments @(
+            'python', '-m',
+            'scripts.validate_smoke_signal',
+            'output/smoke/signal.csv'
         )
     }
 
     Invoke-InEnvironment -Conda $conda -Arguments @(
         'python', '-m', 'pytest', '-q'
-    )
-    Invoke-InEnvironment -Conda $conda -Arguments @(
-        'python',
-        'scripts/validate_smoke_signal.py',
-        'output/smoke/signal.csv'
     )
     Invoke-InEnvironment -Conda $conda -Arguments @(
         'python',

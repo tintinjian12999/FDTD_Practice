@@ -1,4 +1,6 @@
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pytest
@@ -43,3 +45,24 @@ def test_validate_smoke_signal_rejects_wrong_value(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="sine"):
         validate_smoke_signal(csv_path)
+
+
+def test_validator_module_cli_accepts_expected_signal(tmp_path: Path) -> None:
+    csv_path = tmp_path / "signal.csv"
+    write_signal(csv_path)
+    repository_root = Path(__file__).parents[1]
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "scripts.validate_smoke_signal",
+            str(csv_path),
+        ],
+        cwd=repository_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

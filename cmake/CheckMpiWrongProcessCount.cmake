@@ -9,7 +9,14 @@ execute_process(
   TIMEOUT 25
 )
 
-if(process_result STREQUAL "0")
+if(NOT process_result MATCHES "^-?[0-9]+$")
+  message(
+    FATAL_ERROR
+    "MPI smoke did not exit normally: ${process_result}"
+  )
+endif()
+
+if(process_result EQUAL 0)
   message(FATAL_ERROR "MPI smoke unexpectedly accepted five processes.")
 endif()
 
