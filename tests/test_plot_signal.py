@@ -22,6 +22,9 @@ def test_load_signal_reads_valid_csv(tmp_path: Path) -> None:
         ("sample,amplitude\n0,1\n", "header"),
         ("index,value\n0,broken\n", "numeric"),
         ("index,value\n0,nan\n", "finite"),
+        ("index,value\n0,1,extra\n", "columns"),
+        ("index,value\n0\n", "columns"),
+        ('"index,value\n0,1\n', "syntax"),
     ],
 )
 def test_load_signal_rejects_invalid_csv(
@@ -31,6 +34,14 @@ def test_load_signal_rejects_invalid_csv(
     csv_path.write_text(content, encoding="utf-8")
 
     with pytest.raises(ValueError, match=message):
+        load_signal(csv_path)
+
+
+def test_load_signal_rejects_empty_data(tmp_path: Path) -> None:
+    csv_path = tmp_path / "empty.csv"
+    csv_path.write_text("index,value\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="no data"):
         load_signal(csv_path)
 
 

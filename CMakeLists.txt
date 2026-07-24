@@ -8,7 +8,15 @@ option(UFDTD_WARNINGS_AS_ERRORS "Treat project warnings as errors" OFF)
 
 add_library(ufdtd_warnings INTERFACE)
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  target_compile_options(ufdtd_warnings INTERFACE -Wall -Wextra -Wpedantic)
+  target_compile_options(
+    ufdtd_warnings
+    INTERFACE
+      -Wall
+      -Wextra
+      -Wpedantic
+      "$<$<CONFIG:Debug>:-O0>"
+      "$<$<CONFIG:Debug>:-g3>"
+  )
   if(UFDTD_WARNINGS_AS_ERRORS)
     target_compile_options(ufdtd_warnings INTERFACE -Werror)
   endif()
@@ -41,14 +49,28 @@ target_link_libraries(pthread_smoke PRIVATE Threads::Threads)
 
 if(WIN32 AND DEFINED ENV{CONDA_PREFIX})
   set(_UFDTD_CONDA_LIBRARY "$ENV{CONDA_PREFIX}/Library")
+  set(_UFDTD_MPI_HEADER "${_UFDTD_CONDA_LIBRARY}/include/mpi.h")
+  set(_UFDTD_MPI_LIBRARY "${_UFDTD_CONDA_LIBRARY}/lib/msmpi.lib")
+  set(_UFDTD_MPI_RUNTIME "${_UFDTD_CONDA_LIBRARY}/bin/mpiexec.exe")
   if(
-    EXISTS "${_UFDTD_CONDA_LIBRARY}/include/mpi.h"
-    AND EXISTS "${_UFDTD_CONDA_LIBRARY}/lib/msmpi.lib"
+    NOT EXISTS "${_UFDTD_MPI_HEADER}"
+    OR NOT EXISTS "${_UFDTD_MPI_LIBRARY}"
+    OR NOT EXISTS "${_UFDTD_MPI_RUNTIME}"
   )
-    set(ENV{MSMPI_BIN} "${_UFDTD_CONDA_LIBRARY}/bin")
-    set(ENV{MSMPI_INC} "${_UFDTD_CONDA_LIBRARY}/include")
-    set(ENV{MSMPI_LIB64} "${_UFDTD_CONDA_LIBRARY}/lib")
+    message(
+      FATAL_ERROR
+      "Conda MS-MPI is incomplete under $ENV{CONDA_PREFIX}.\n"
+      "Header: ${_UFDTD_MPI_HEADER}\n"
+      "Library: ${_UFDTD_MPI_LIBRARY}\n"
+      "Runtime: ${_UFDTD_MPI_RUNTIME}"
+    )
   endif()
+  set(ENV{MSMPI_BIN} "${_UFDTD_CONDA_LIBRARY}/bin")
+  set(ENV{MSMPI_INC} "${_UFDTD_CONDA_LIBRARY}/include")
+  set(ENV{MSMPI_LIB64} "${_UFDTD_CONDA_LIBRARY}/lib")
+  unset(_UFDTD_MPI_RUNTIME)
+  unset(_UFDTD_MPI_LIBRARY)
+  unset(_UFDTD_MPI_HEADER)
   unset(_UFDTD_CONDA_LIBRARY)
 endif()
 
@@ -66,3 +88,18 @@ add_test(
     ${MPIEXEC_POSTFLAGS}
 )
 set_tests_properties(mpi_smoke PROPERTIES TIMEOUT 30)
+
+add_test(
+  NAME mpi_wrong_process_count
+  COMMAND
+    "${CMAKE_COMMAND}"
+    "-DMPIEXEC_EXECUTABLE=${MPIEXEC_EXECUTABLE}"
+    "-DMPIEXEC_NUMPROC_FLAG=${MPIEXEC_NUMPROC_FLAG}"
+    "-DMPI_PROGRAM=$<TARGET_FILE:mpi_smoke>"
+    -P "${PROJECT_SOURCE_DIR}/cmake/CheckMpiWrongProcessCount.cmake"
+)
+set_tests_properties(
+  mpi_wrong_process_count
+  PROPERTIES
+    TIMEOUT 30
+)

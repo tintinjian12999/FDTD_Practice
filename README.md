@@ -48,7 +48,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
 - 數學、動態記憶體及 CSV 輸出測試
 - 兩執行緒 pthread 測試
 - 四個本機程序的 MS-MPI 測試
+- 錯誤 MPI 程序數在 collective operation 前安全停止的負向測試
 - Python CSV 驗證與無視窗 Matplotlib 繪圖測試
+- 128 筆正弦波輸出的索引、數量與 `1e-12` 數值容差驗證
 
 成功後會在 `output/smoke/` 產生 `signal.csv` 與 `signal.png`。
 
@@ -136,7 +138,9 @@ Verification covers:
 - Math, dynamic-memory, and CSV-output checks
 - A two-worker pthread check
 - A four-process local MS-MPI check
+- A negative check that rejects the wrong MPI process count before collection
 - Strict Python CSV validation and headless Matplotlib plotting
+- Index, count, and `1e-12` tolerance checks for all 128 sine-wave samples
 
 Successful verification creates `signal.csv` and `signal.png` under
 `output/smoke/`.

@@ -86,5 +86,8 @@ Invoke-CondaCommand -Conda $conda -Arguments @(
 Invoke-CondaCommand -Conda $conda -Arguments @(
     'run', '-n', 'ufdtd-c', '--no-capture-output', 'python', '--version'
 )
+Invoke-CondaCommand -Conda $conda -Arguments @(
+    'run', '-n', 'ufdtd-c', '--no-capture-output', 'mpiexec', '-help'
+)
 
 Write-Host 'The ufdtd-c environment is ready.'

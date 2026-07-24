@@ -11,28 +11,38 @@ matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
 
+def _parse_numeric_row(row: list[str], row_number: int) -> tuple[float, float]:
+    if len(row) != 2:
+        raise ValueError(f"CSV row {row_number} must contain exactly 2 columns")
+    try:
+        index = float(row[0])
+        value = float(row[1])
+    except ValueError as error:
+        raise ValueError(
+            f"Invalid numeric value on CSV row {row_number}"
+        ) from error
+    if not np.isfinite(index) or not np.isfinite(value):
+        raise ValueError(f"CSV row {row_number} must contain finite values")
+    return index, value
+
+
 def load_signal(path: Path) -> tuple[np.ndarray, np.ndarray]:
     if not path.is_file():
         raise ValueError(f"Signal file does not exist: {path}")
 
     indices: list[float] = []
     values: list[float] = []
-    with path.open(newline="", encoding="utf-8") as stream:
-        reader = csv.DictReader(stream)
-        if reader.fieldnames != ["index", "value"]:
-            raise ValueError("CSV header must be exactly: index,value")
-        for row_number, row in enumerate(reader, start=2):
-            try:
-                index = float(row["index"])
-                value = float(row["value"])
-            except (KeyError, TypeError, ValueError) as error:
-                raise ValueError(
-                    f"Invalid numeric value on CSV row {row_number}"
-                ) from error
-            if not np.isfinite(index) or not np.isfinite(value):
-                raise ValueError(f"CSV row {row_number} must contain finite values")
-            indices.append(index)
-            values.append(value)
+    try:
+        with path.open(newline="", encoding="utf-8") as stream:
+            reader = csv.reader(stream, strict=True)
+            if next(reader, None) != ["index", "value"]:
+                raise ValueError("CSV header must be exactly: index,value")
+            for row_number, row in enumerate(reader, start=2):
+                index, value = _parse_numeric_row(row, row_number)
+                indices.append(index)
+                values.append(value)
+    except csv.Error as error:
+        raise ValueError(f"Invalid CSV syntax: {error}") from error
 
     if not indices:
         raise ValueError("Signal CSV contains no data rows")

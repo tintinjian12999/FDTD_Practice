@@ -6,5 +6,7 @@
 - Added serial, dynamic-memory, pthread, and four-process MPI smoke tests.
 - Added deterministic CSV output and headless Matplotlib verification.
 - Added idempotent bootstrap and full verification PowerShell scripts.
+- Added strict CSV shape checks, deterministic sample validation, and safe MPI
+  process-count rejection.
 - Approved the native Windows C/FDTD development-environment design.
 - Added the initial repository governance and documentation files.

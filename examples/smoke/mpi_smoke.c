@@ -16,16 +16,19 @@ static int report_mpi_error(int error, const char *operation)
 
 static int gather_and_validate_ranks(int rank, int size)
 {
-    int status = 0;
-    int ranks[4] = {-1, -1, -1, -1};
-
     if (size != 4) {
         if (rank == 0) {
-            fprintf(stderr, "Expected 4 MPI processes, received %d.\n", size);
+            fprintf(
+                stderr,
+                "Expected 4 MPI processes. "
+                "Skipping rank gather because %d processes were started.\n",
+                size
+            );
         }
-        status = 1;
+        return 1;
     }
 
+    int ranks[4] = {-1, -1, -1, -1};
     int error = MPI_Gather(
         &rank, 1, MPI_INT, ranks, 1, MPI_INT, 0, MPI_COMM_WORLD
     );
@@ -33,7 +36,8 @@ static int gather_and_validate_ranks(int rank, int size)
         return report_mpi_error(error, "MPI_Gather");
     }
 
-    if (rank == 0 && status == 0) {
+    int status = 0;
+    if (rank == 0) {
         for (int index = 0; index < 4; ++index) {
             if (ranks[index] != index) {
                 fprintf(stderr, "Unexpected rank at index %d.\n", index);

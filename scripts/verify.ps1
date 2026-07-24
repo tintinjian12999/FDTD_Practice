@@ -32,6 +32,14 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $repositoryRoot
 try {
     New-Item -ItemType Directory -Force -Path 'output\smoke' | Out-Null
+    foreach ($artifact in @(
+        'output\smoke\signal.csv',
+        'output\smoke\signal.png'
+    )) {
+        if (Test-Path -LiteralPath $artifact) {
+            Remove-Item -LiteralPath $artifact -Force
+        }
+    }
 
     foreach ($preset in @('debug', 'release')) {
         Invoke-InEnvironment -Conda $conda -Arguments @(
@@ -47,6 +55,11 @@ try {
 
     Invoke-InEnvironment -Conda $conda -Arguments @(
         'python', '-m', 'pytest', '-q'
+    )
+    Invoke-InEnvironment -Conda $conda -Arguments @(
+        'python',
+        'scripts/validate_smoke_signal.py',
+        'output/smoke/signal.csv'
     )
     Invoke-InEnvironment -Conda $conda -Arguments @(
         'python',
