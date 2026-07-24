@@ -42,9 +42,13 @@ try {
     }
 
     foreach ($preset in @('debug', 'release')) {
-        Invoke-InEnvironment -Conda $conda -Arguments @(
+        $configureArguments = @(
             'cmake', '--preset', $preset, '--fresh'
         )
+        if ($preset -eq 'debug') {
+            $configureArguments += '-DUFDTD_WARNINGS_AS_ERRORS=ON'
+        }
+        Invoke-InEnvironment -Conda $conda -Arguments $configureArguments
         Invoke-InEnvironment -Conda $conda -Arguments @(
             'cmake', '--build', '--preset', $preset
         )

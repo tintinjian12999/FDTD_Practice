@@ -1,7 +1,7 @@
 # One-Dimensional FDTD Program Design
 
-**Date:** 2026-07-24  
-**Status:** Approved for autonomous implementation  
+**Date:** 2026-07-24
+**Status:** Approved for autonomous implementation
 **Reference:** John B. Schneider, *Understanding the Finite-Difference
 Time-Domain Method*, Sections 3.3-3.9 and 6.3-6.4
 

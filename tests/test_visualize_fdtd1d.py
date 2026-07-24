@@ -56,6 +56,13 @@ def write_valid_run(directory: Path) -> None:
     )
 
 
+def write_metadata_override(directory: Path, **changes: object) -> None:
+    metadata = dict(METADATA, **changes)
+    (directory / "run.json").write_text(
+        json.dumps(metadata), encoding="utf-8"
+    )
+
+
 def test_valid_run_creates_plots_and_animation(tmp_path: Path) -> None:
     directory = tmp_path / "valid"
     write_valid_run(directory)
@@ -101,25 +108,13 @@ def invalid_case(directory: Path, case: str) -> None:
             encoding="utf-8",
         )
     elif case == "grid":
-        metadata = dict(METADATA, grid_size=6)
-        (directory / "run.json").write_text(
-            json.dumps(metadata), encoding="utf-8"
-        )
+        write_metadata_override(directory, grid_size=6)
     elif case == "metadata":
-        metadata = dict(METADATA, time_steps=4)
-        (directory / "run.json").write_text(
-            json.dumps(metadata), encoding="utf-8"
-        )
+        write_metadata_override(directory, time_steps=4)
     elif case == "units":
-        metadata = dict(METADATA, position_unit="meters")
-        (directory / "run.json").write_text(
-            json.dumps(metadata), encoding="utf-8"
-        )
+        write_metadata_override(directory, position_unit="meters")
     elif case == "scale-values":
-        metadata = dict(METADATA, dt=0.5)
-        (directory / "run.json").write_text(
-            json.dumps(metadata), encoding="utf-8"
-        )
+        write_metadata_override(directory, dt=0.5)
 
 
 @pytest.mark.parametrize(
