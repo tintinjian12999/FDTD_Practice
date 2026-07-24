@@ -58,10 +58,18 @@ class SimulationRunner:
         self,
         command: list[str],
         cwd: Path | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> RunResult:
+        if cancel_event is not None and cancel_event.is_set():
+            return RunResult(-1, "", "", True)
         process = self._start(command, cwd)
         try:
+            if cancel_event is not None and cancel_event.is_set():
+                self.cancel()
             stdout, stderr = process.communicate()
+        except BaseException:
+            self._terminate_and_reap(process)
+            raise
         finally:
             cancelled = self._release(process)
         return RunResult(
@@ -70,6 +78,22 @@ class SimulationRunner:
             stderr=stderr,
             cancelled=cancelled,
         )
+
+    @staticmethod
+    def _terminate_and_reap(process: subprocess.Popen[str]) -> None:
+        if process.poll() is None:
+            try:
+                process.terminate()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            try:
+                process.kill()
+            except OSError:
+                pass
+            process.wait()
 
     def cancel(self) -> bool:
         with self._lock:

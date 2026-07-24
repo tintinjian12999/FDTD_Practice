@@ -48,6 +48,7 @@ class FDTD1DApplication:
         self.result_widgets: list[ttk.Widget] = []
         self._running = False
         self._playing = False
+        self._cancel_event = threading.Event()
         self._syncing_slider = False
         self._poll_identifier: str | None = None
         self.status_text = tk.StringVar(value="Ready / 就緒")
@@ -79,6 +80,7 @@ class FDTD1DApplication:
         style.configure("Section.TLabelframe.Label", font=("Segoe UI", 10, "bold"))
         style.configure("Run.TButton", font=("Segoe UI", 10, "bold"))
         style.configure("Status.TLabel", foreground="#174f78")
+        style.configure("Error.Status.TLabel", foreground="#a51d1d")
 
     def _build_layout(self) -> None:
         main = ttk.Panedwindow(self.root, orient=tk.HORIZONTAL)
@@ -201,10 +203,11 @@ class FDTD1DApplication:
         self.cancel_button.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
         self.progress = ttk.Progressbar(parent, mode="indeterminate")
         self.progress.pack(fill=tk.X, pady=4)
-        ttk.Label(
+        self.status_label = ttk.Label(
             parent, textvariable=self.status_text, style="Status.TLabel",
             wraplength=320,
-        ).pack(fill=tk.X, pady=(2, 0))
+        )
+        self.status_label.pack(fill=tk.X, pady=(2, 0))
 
     def _build_snapshot_controls(self, parent: ttk.Frame) -> None:
         controls = ttk.Frame(parent)
@@ -311,13 +314,18 @@ class FDTD1DApplication:
         self.log.see(tk.END)
         self.log.configure(state=tk.DISABLED)
 
+    def _set_status(self, message: str, error: bool = False) -> None:
+        style = "Error.Status.TLabel" if error else "Status.TLabel"
+        self.status_text.set(message)
+        self.status_label.configure(style=style)
+
     def _show_error(self, message: str) -> None:
-        self.status_text.set(f"Error / 錯誤: {message}")
+        self._set_status(f"Error / 錯誤: {message}", error=True)
         self._append_log(f"ERROR: {message}")
         messagebox.showerror("uFDTD", message, parent=self.root)
 
     def run_simulation(self) -> None:
-        if self.runner.running:
+        if self._running:
             return
         try:
             parameters = self._parameters()
@@ -335,8 +343,9 @@ class FDTD1DApplication:
         ):
             return
         self._reset_playback()
+        self._cancel_event.clear()
         self._set_running(True)
-        self.status_text.set("Running / 執行中")
+        self._set_status("Running / 執行中")
         self._append_log(f"> {subprocess.list2cmdline(command)}")
         threading.Thread(
             target=self._run_worker,
@@ -346,9 +355,13 @@ class FDTD1DApplication:
 
     def _run_worker(self, command: list[str], output: Path) -> None:
         try:
-            result = self.runner.run(command, cwd=self.repository_root)
+            result = self.runner.run(
+                command,
+                cwd=self.repository_root,
+                cancel_event=self._cancel_event,
+            )
             event = WorkerEvent(output, result=result)
-        except OSError as error:
+        except Exception as error:
             event = WorkerEvent(output, error=str(error))
         self.events.put(event)
 
@@ -371,7 +384,9 @@ class FDTD1DApplication:
         self.frame_slider.configure(from_=0, to=maximum)
         for widget in self.result_widgets:
             widget.configure(state=tk.NORMAL)
-        self.status_text.set("Completed / 完成")
+        if self.plot.frame_count < 2:
+            self.play_button.configure(state=tk.DISABLED)
+        self._set_status("Completed / 完成")
         self._append_log(f"Loaded validated results from {output}")
 
     def _handle_event(self, event: WorkerEvent) -> None:
@@ -386,7 +401,7 @@ class FDTD1DApplication:
         self._append_log(result.stdout)
         self._append_log(result.stderr)
         if result.cancelled:
-            self.status_text.set("Cancelled / 已取消")
+            self._set_status("Cancelled / 已取消")
             self._append_log("Simulation cancelled.")
         elif result.returncode != 0:
             self._show_error(f"Solver exited with code {result.returncode}.")
@@ -394,8 +409,10 @@ class FDTD1DApplication:
             self._handle_success(event.output_directory)
 
     def cancel_simulation(self) -> None:
-        if self.runner.cancel():
-            self.status_text.set("Cancelling / 正在取消")
+        if self._running:
+            self._cancel_event.set()
+            self.runner.cancel()
+            self._set_status("Cancelling / 正在取消")
             self._append_log("Cancellation requested.")
 
     def _plot_frame_changed(self, frame: int) -> None:
@@ -418,9 +435,9 @@ class FDTD1DApplication:
         if self._playing:
             self._reset_playback()
         else:
-            self.plot.start()
-            self._playing = True
-            self.play_button.configure(text="Pause / 暫停")
+            if self.plot.start():
+                self._playing = True
+                self.play_button.configure(text="Pause / 暫停")
 
     def _reset_playback(self) -> None:
         self.plot.stop()
@@ -428,20 +445,20 @@ class FDTD1DApplication:
         self.play_button.configure(text="Play / 播放")
 
     def _request_close(self) -> None:
-        if self.runner.running and not messagebox.askyesno(
+        if self._running and not messagebox.askyesno(
             "Exit uFDTD?",
             "A simulation is running. Cancel it and exit?",
             parent=self.root,
         ):
             return
-        if self.runner.running:
-            self.runner.cancel()
+        if self._running:
+            self.cancel_simulation()
             self.root.after(50, self._wait_for_close)
         else:
             self._destroy()
 
     def _wait_for_close(self) -> None:
-        if self.runner.running:
+        if self._running:
             self.root.after(50, self._wait_for_close)
         else:
             self._destroy()

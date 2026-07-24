@@ -87,7 +87,17 @@ def test_result_plot_navigates_and_controls_animation() -> None:
         assert plot.current_frame == 0
         plot.next_frame()
         assert plot.current_frame == 1
-        plot.start()
+        assert plot.start() is True
         plot.stop()
+
+        one_frame = SnapshotData(
+            snapshots.time_step[:5],
+            snapshots.time[:5],
+            snapshots.index[:5],
+            snapshots.position[:5],
+            snapshots.ez[:5],
+        )
+        plot.show_run(metadata, probe, one_frame)
+        assert plot.start() is False
     finally:
         root.destroy()

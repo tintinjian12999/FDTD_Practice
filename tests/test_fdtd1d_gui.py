@@ -85,6 +85,29 @@ def test_application_constructs_and_switches_scale_and_mode() -> None:
     assert result.returncode == 0, result.stderr
 
 
+def test_application_guards_startup_close_and_worker_errors() -> None:
+    code = (
+        "import tkinter as tk; from pathlib import Path; "
+        "from gui.fdtd1d_gui import FDTD1DApplication, ROOT, messagebox; "
+        "root=tk.Tk(); root.withdraw(); app=FDTD1DApplication(root, ROOT); "
+        "app._set_running(True); app.cancel_simulation(); "
+        "assert app._cancel_event.is_set(); "
+        "asked=[]; destroyed=[]; "
+        "messagebox.askyesno=lambda *a,**k: asked.append(True) and False; "
+        "app._destroy=lambda: destroyed.append(True); app._request_close(); "
+        "assert asked and not destroyed; "
+        "app._set_status('failure', error=True); "
+        "assert str(app.status_label.cget('style')) == 'Error.Status.TLabel'; "
+        "app.runner=type('Failing',(),{'run':lambda *a,**k: "
+        "(_ for _ in ()).throw(RuntimeError('boom'))})(); "
+        "app._run_worker([],Path('.')); event=app.events.get_nowait(); "
+        "assert event.error == 'boom'; root.destroy()"
+    )
+    result = run_child(code)
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_application_runs_real_solver_without_blocking(
     tmp_path: Path,
 ) -> None:

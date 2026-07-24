@@ -92,3 +92,59 @@ def test_runner_reports_missing_executable_without_stale_state() -> None:
         runner.run(["definitely-missing-fdtd-executable.exe"])
 
     assert not runner.running
+
+
+def test_pre_cancelled_run_never_starts_process(tmp_path: Path) -> None:
+    runner = SimulationRunner()
+    cancellation = threading.Event()
+    cancellation.set()
+    marker = tmp_path / "started.txt"
+    command = [
+        sys.executable,
+        "-c",
+        f"from pathlib import Path; Path({str(marker)!r}).touch()",
+    ]
+
+    result = runner.run(command, cancel_event=cancellation)
+
+    assert result.cancelled
+    assert result.returncode != 0
+    assert not marker.exists()
+    assert not runner.running
+
+
+def test_communication_failure_terminates_and_reaps_child(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BrokenProcess:
+        returncode = None
+        terminated = False
+        waited = False
+
+        def communicate(self) -> tuple[str, str]:
+            raise RuntimeError("communication failed")
+
+        def poll(self) -> None:
+            return None
+
+        def terminate(self) -> None:
+            self.terminated = True
+
+        def wait(self, timeout: float | None = None) -> int:
+            self.waited = True
+            self.returncode = -1
+            return self.returncode
+
+    process = BrokenProcess()
+    monkeypatch.setattr(
+        "gui.fdtd1d_runner.subprocess.Popen",
+        lambda *args, **kwargs: process,
+    )
+    runner = SimulationRunner()
+
+    with pytest.raises(RuntimeError, match="communication failed"):
+        runner.run(["solver.exe"])
+
+    assert process.terminated
+    assert process.waited
+    assert not runner.running

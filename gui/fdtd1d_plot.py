@@ -157,9 +157,12 @@ class ResultPlot:
         self.set_frame((self._current_frame + 1) % self.frame_count)
         self.start()
 
-    def start(self) -> None:
-        if self.frame_count > 1 and self._after_identifier is None:
+    def start(self) -> bool:
+        if self.frame_count <= 1:
+            return False
+        if self._after_identifier is None:
             self._after_identifier = self._parent.after(100, self._advance)
+        return True
 
     def stop(self) -> None:
         if self._after_identifier is not None:
