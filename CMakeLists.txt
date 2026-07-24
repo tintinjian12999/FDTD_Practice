@@ -111,3 +111,16 @@ add_executable(
 target_compile_features(book_1d_bare_bones PRIVATE c_std_17)
 target_link_libraries(book_1d_bare_bones PRIVATE ufdtd_warnings m)
 add_test(NAME book_1d_bare_bones COMMAND book_1d_bare_bones)
+
+add_library(ufdtd_fdtd1d STATIC src/fdtd1d.c)
+target_compile_features(ufdtd_fdtd1d PUBLIC c_std_17)
+target_include_directories(
+  ufdtd_fdtd1d
+  PUBLIC "${PROJECT_SOURCE_DIR}/include"
+)
+target_link_libraries(ufdtd_fdtd1d PUBLIC ufdtd_warnings m)
+
+add_executable(fdtd1d_core_tests tests/c/test_fdtd1d.c)
+target_compile_features(fdtd1d_core_tests PRIVATE c_std_17)
+target_link_libraries(fdtd1d_core_tests PRIVATE ufdtd_fdtd1d)
+add_test(NAME fdtd1d_core_tests COMMAND fdtd1d_core_tests)
