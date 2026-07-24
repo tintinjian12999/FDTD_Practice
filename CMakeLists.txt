@@ -103,3 +103,11 @@ set_tests_properties(
   PROPERTIES
     TIMEOUT 30
 )
+
+add_executable(
+  book_1d_bare_bones
+  examples/ch03/book_1d_bare_bones.c
+)
+target_compile_features(book_1d_bare_bones PRIVATE c_std_17)
+target_link_libraries(book_1d_bare_bones PRIVATE ufdtd_warnings m)
+add_test(NAME book_1d_bare_bones COMMAND book_1d_bare_bones)
