@@ -1,174 +1,194 @@
 # uFDTD
 
-## 繁體中文
+## 中文
 
-uFDTD 是依據 John B. Schneider《Understanding the Finite-Difference
-Time-Domain Method》建立的原生 Windows C 語言 FDTD 學習與開發專案。
-目前已具備可重現的 C17 工具鏈、序列程式、pthread、四程序 MPI，以及
-Python 圖形後處理驗證。
+uFDTD 是以 John B. Schneider 的 *Understanding the Finite-Difference
+Time-Domain Method* 為學習依據的原生 Windows C17 專案。目前包含書中
+Program 3.1 的獨立重現、可重用的一維 Yee 網格求解核心、命令列介面、
+資料驗證、靜態圖與 GIF 動畫。
 
-### 必要條件
+### 建立環境
 
-- 64-bit Windows 11
-- Miniconda；`conda.exe` 位於 `PATH`，或安裝在
-  `%LOCALAPPDATA%\miniconda3`
-- Windows PowerShell 5.1 或 PowerShell 7
-
-本專案使用 Conda 建立獨立的 `ufdtd-c` 環境，不會將 FDTD 套件安裝到
-`base` 或既有的 `cpp_env`。在原生 Windows 上，MPI 實作採用 Microsoft
-MPI（MS-MPI），不是書中類 Unix 環境常見的 Open MPI。
-
-### 建立或更新環境
-
-在專案根目錄執行：
+需求為 64-bit Windows 11、Miniconda，以及 Windows PowerShell 5.1 或
+PowerShell 7。在儲存庫根目錄執行：
 
 ```powershell
 .\scripts\bootstrap.ps1
+conda activate ufdtd-c
 ```
 
-腳本會依據 `environment.yml` 建立或更新 `ufdtd-c`，並驗證 GCC、CMake、
-Ninja 與 Python。腳本也會在操作前後比對既有的 `base` 和 `cpp_env`
-套件狀態。
+專案只建立或更新隔離環境 `ufdtd-c`，不會修改 `base` 或 `cpp_env`。
+Windows 平行運算使用 Microsoft MPI（MS-MPI）。
 
-若 PowerShell 執行原則阻擋本機腳本，可只對這一次程序使用：
+### 建置與執行第一支書本程式
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
+cmake --preset debug
+cmake --build --preset debug
+.\build\debug\book_1d_bare_bones.exe
 ```
 
-### 執行完整驗證
+程式固定使用 200 個網格、250 個時間步，並將每個時間步的 `Ez[50]`
+輸出至終端。延遲高斯脈衝應在輸出索引 80 達到峰值 1。
+
+### 執行可設定的一維求解器
+
+正規化單位範例：
+
+```powershell
+.\build\debug\fdtd1d.exe `
+  --mode additive-abc `
+  --scale normalized `
+  --grid-size 200 `
+  --time-steps 450 `
+  --courant 0.9 `
+  --source-index 50 `
+  --probe-index 100 `
+  --snapshot-interval 10 `
+  --output-dir output\fdtd1d
+```
+
+SI 單位範例：
+
+```powershell
+.\build\debug\fdtd1d.exe `
+  --mode additive-abc `
+  --scale si `
+  --grid-size 200 `
+  --time-steps 450 `
+  --dx 0.01 `
+  --dt 3.002076856783368e-11 `
+  --source-index 50 `
+  --probe-index 100 `
+  --snapshot-interval 10 `
+  --output-dir output\fdtd1d-si
+```
+
+SI 模式由 \(S_c=c_0\Delta t/\Delta x\) 計算 Courant 數。兩種尺度都強制
+\(0<S_c\le1\)；不合法或矛盾的參數會在建立輸出目錄前以結束碼 2 拒絕。
+
+邊界／激發模式：
+
+- `additive-abc`：網格內加性高斯源，兩端使用一階 Mur 吸收邊界。
+- `hard-pmc`：重現書本早期範例，在索引 0 使用硬源；另一端為 PMC 型反射
+  邊界。
+
+完整參數可用 `.\build\debug\fdtd1d.exe --help` 查詢。每次執行會覆寫指定
+目錄內的：
+
+- `run.json`：解析後的設定、尺度與單位。
+- `probe.csv`：`time_step,time,ez` 探針時間序列。
+- `snapshots.csv`：`time_step,time,index,position,ez` 長格式場快照。
+
+### 繪圖與動畫
+
+```powershell
+python -m scripts.visualize_fdtd1d output\fdtd1d
+```
+
+視覺化工具會先嚴格驗證 JSON/CSV 的結構、有限值、時間、索引與網格一致性，
+再原子式產生 `probe.png`、`snapshot_final.png` 和 `field.gif`。無效資料不會
+覆寫既有圖檔。
+
+### 執行自己的 C 程式
+
+將程式放在 `examples/`，並在 `CMakeLists.txt` 加入獨立 target，例如：
+
+```cmake
+add_executable(my_fdtd examples/my_fdtd.c)
+target_compile_features(my_fdtd PRIVATE c_std_17)
+target_link_libraries(my_fdtd PRIVATE ufdtd_fdtd1d)
+```
+
+重新執行 `cmake --preset debug` 與 `cmake --build --preset debug`，然後執行
+`.\build\debug\my_fdtd.exe`。若只需要命令列參數，通常直接擴充或呼叫
+`fdtd1d.exe` 較適合。
+
+### 完整驗證與目前限制
 
 ```powershell
 .\scripts\verify.ps1
 ```
 
-完整驗證包括：
+驗證涵蓋 Debug/Release、警告視為錯誤、CTest、pthread、四程序 MS-MPI、
+數值回歸、命令列輸出、嚴格資料驗證與圖像生成。
 
-- Debug 與 Release C17 編譯
-- 數學、動態記憶體及 CSV 輸出測試
-- 兩執行緒 pthread 測試
-- 四個本機程序的 MS-MPI 測試
-- 錯誤 MPI 程序數在 collective operation 前安全停止的負向測試
-- Python CSV 驗證與無視窗 Matplotlib 繪圖測試
-- 128 筆正弦波輸出的索引、數量與 `1e-12` 數值容差驗證
-
-成功後會在 `output/smoke/` 產生 `signal.csv` 與 `signal.png`。
-
-### 互動式 C 開發
-
-```powershell
-conda activate ufdtd-c
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug
-```
-
-主要設定：
-
-- 語言標準：C17
-- 編譯器：GCC 15.2
-- 警告：`-Wall -Wextra -Wpedantic`
-- 建置系統：CMake 與 Ninja
-- pthread 連結：`Threads::Threads`
-- MPI 連結：`MPI::MPI_C`
-
-新練習程式可依照 `examples/smoke/` 的小型範例建立，再於
-`CMakeLists.txt` 新增獨立 target 與 CTest。
-
-### 專案資料
-
-- `environment.yml`：Conda 依賴與版本範圍
-- `CMakeLists.txt`：C 程式、pthread、MPI 與測試定義
-- `CMakePresets.json`：Debug 與 Release 設定
-- `examples/smoke/`：工具鏈可執行驗證
-- `scripts/`：環境、驗證及繪圖工具
-- `tests/`：Python 自動測試
-- `docs/superpowers/`：核准的設計與實作計畫
-
-本機書籍 `ufdtd.pdf`、建置目錄與產生的資料已刻意列入 `.gitignore`，
-不會提交到版本控制。
+第一版只支援一維、均勻自由空間、Gaussian 激發、單一探針，以及一階 Mur
+ABC；尚未包含介質、損耗、色散、TFSF、PML、二維／三維或 GUI。
 
 ## English
 
-uFDTD is a native Windows C learning and development project based on John B.
-Schneider's *Understanding the Finite-Difference Time-Domain Method*. It
-provides a reproducible C17 toolchain with serial, pthread, four-process MPI,
-and Python post-processing checks.
+uFDTD is a native Windows C17 learning project based on John B. Schneider's
+*Understanding the Finite-Difference Time-Domain Method*. It includes an
+independent reproduction of Program 3.1, a reusable one-dimensional Yee-grid
+solver, a strict CLI, validated data output, static plots, and GIF animation.
 
-### Prerequisites
+### Environment and build
 
-- 64-bit Windows 11
-- Miniconda with `conda.exe` in `PATH`, or installed under
-  `%LOCALAPPDATA%\miniconda3`
-- Windows PowerShell 5.1 or PowerShell 7
-
-The project creates an isolated Conda environment named `ufdtd-c`; it does not
-install FDTD dependencies into `base` or the existing `cpp_env`. Native Windows
-uses Microsoft MPI (MS-MPI), rather than the Open MPI implementation commonly
-used by the book's Unix-like examples.
-
-### Create or update the environment
-
-Run from the repository root:
+The prerequisites are 64-bit Windows 11, Miniconda, and Windows PowerShell 5.1
+or PowerShell 7.
 
 ```powershell
 .\scripts\bootstrap.ps1
+conda activate ufdtd-c
+cmake --preset debug
+cmake --build --preset debug
 ```
 
-The script creates or updates `ufdtd-c` from `environment.yml`, verifies GCC,
-CMake, Ninja, and Python, and compares the existing `base` and `cpp_env`
-package states before and after the operation.
+The isolated `ufdtd-c` environment leaves `base` and `cpp_env` unchanged.
+Native parallel checks use Microsoft MPI.
 
-If the PowerShell execution policy blocks local scripts, bypass it for this
-process only:
+Run the book-faithful program:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1
+.\build\debug\book_1d_bare_bones.exe
 ```
 
-### Run complete verification
+Run the configurable normalized solver:
+
+```powershell
+.\build\debug\fdtd1d.exe `
+  --mode additive-abc `
+  --scale normalized `
+  --grid-size 200 `
+  --time-steps 450 `
+  --courant 0.9 `
+  --source-index 50 `
+  --probe-index 100 `
+  --snapshot-interval 10 `
+  --output-dir output\fdtd1d
+```
+
+For SI units, replace `--courant 0.9` with, for example,
+`--scale si --dx 0.01 --dt 3.002076856783368e-11`. The solver derives
+\(S_c=c_0\Delta t/\Delta x\) and requires \(0<S_c\le1\).
+
+`additive-abc` uses an interior additive Gaussian source and first-order Mur
+boundaries. `hard-pmc` places a hard source at index 0 and retains the
+reflecting boundary behavior of the early book example. Use
+`.\build\debug\fdtd1d.exe --help` for every option.
+
+Each run replaces `run.json`, `probe.csv`, and `snapshots.csv` in its output
+directory. Generate validated plots and animation with:
+
+```powershell
+python -m scripts.visualize_fdtd1d output\fdtd1d
+```
+
+This creates `probe.png`, `snapshot_final.png`, and `field.gif` only after all
+input files pass schema and numerical checks.
+
+To build your own source, place it under `examples/`, add a distinct
+`add_executable` target to `CMakeLists.txt`, link `ufdtd_fdtd1d` when the shared
+core is needed, reconfigure, and build.
+
+Run the full Debug, Release, CTest, MPI, Pytest, numerical, and visualization
+workflow with:
 
 ```powershell
 .\scripts\verify.ps1
 ```
 
-Verification covers:
-
-- Debug and Release C17 builds
-- Math, dynamic-memory, and CSV-output checks
-- A two-worker pthread check
-- A four-process local MS-MPI check
-- A negative check that rejects the wrong MPI process count before collection
-- Strict Python CSV validation and headless Matplotlib plotting
-- Index, count, and `1e-12` tolerance checks for all 128 sine-wave samples
-
-Successful verification creates `signal.csv` and `signal.png` under
-`output/smoke/`.
-
-### Interactive C development
-
-```powershell
-conda activate ufdtd-c
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug
-```
-
-The canonical configuration uses C17, GCC 15.2,
-`-Wall -Wextra -Wpedantic`, CMake, Ninja, `Threads::Threads`, and
-`MPI::MPI_C`. Use the small programs under `examples/smoke/` as templates for
-new exercises, then register each program as a separate target and CTest in
-`CMakeLists.txt`.
-
-### Repository contents
-
-- `environment.yml`: Conda dependencies and version ranges
-- `CMakeLists.txt`: C, pthread, MPI, and test definitions
-- `CMakePresets.json`: Debug and Release configurations
-- `examples/smoke/`: executable toolchain checks
-- `scripts/`: environment, verification, and plotting tools
-- `tests/`: Python automated tests
-- `docs/superpowers/`: approved design and implementation plan
-
-The local `ufdtd.pdf`, build trees, and generated outputs are intentionally
-ignored and are not committed to version control.
+The first solver version is limited to one-dimensional uniform free space, a
+Gaussian source, one probe, and first-order Mur ABC. Materials, loss,
+dispersion, TFSF, PML, two/three dimensions, and a GUI are not yet included.

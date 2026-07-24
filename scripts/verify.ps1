@@ -75,9 +75,48 @@ try {
     if ($plot.Length -le 0) {
         throw 'Generated signal plot is empty.'
     }
+
+    New-Item -ItemType Directory -Force -Path 'output\fdtd1d' | Out-Null
+    $fdtdArtifacts = @(
+        'run.json',
+        'probe.csv',
+        'snapshots.csv',
+        'probe.png',
+        'snapshot_final.png',
+        'field.gif'
+    )
+    foreach ($artifact in $fdtdArtifacts) {
+        $path = Join-Path 'output\fdtd1d' $artifact
+        if (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
+    Invoke-InEnvironment -Conda $conda -Arguments @(
+        'build\release\fdtd1d.exe',
+        '--mode', 'additive-abc',
+        '--scale', 'normalized',
+        '--grid-size', '120',
+        '--time-steps', '240',
+        '--source-index', '30',
+        '--probe-index', '60',
+        '--snapshot-interval', '10',
+        '--output-dir', 'output\fdtd1d'
+    )
+    Invoke-InEnvironment -Conda $conda -Arguments @(
+        'python', '-m', 'scripts.visualize_fdtd1d', 'output\fdtd1d'
+    )
+    foreach ($artifact in $fdtdArtifacts) {
+        $path = Join-Path 'output\fdtd1d' $artifact
+        if (-not (Test-Path -LiteralPath $path)) {
+            throw "Expected FDTD artifact is missing: $path"
+        }
+        if ((Get-Item -LiteralPath $path).Length -le 0) {
+            throw "Expected FDTD artifact is empty: $path"
+        }
+    }
 }
 finally {
     Pop-Location
 }
 
-Write-Host 'Debug, Release, MPI, pthread, Python, and plotting checks passed.'
+Write-Host 'Debug, Release, MPI, FDTD, Python, and plotting checks passed.'
