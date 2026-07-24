@@ -33,3 +33,36 @@ add_test(
   NAME signal_writer
   COMMAND signal_writer "${PROJECT_SOURCE_DIR}/output/smoke/signal.csv"
 )
+
+set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+find_package(Threads REQUIRED)
+add_ufdtd_smoke(pthread_smoke examples/smoke/pthread_smoke.c)
+target_link_libraries(pthread_smoke PRIVATE Threads::Threads)
+
+if(WIN32 AND DEFINED ENV{CONDA_PREFIX})
+  set(_UFDTD_CONDA_LIBRARY "$ENV{CONDA_PREFIX}/Library")
+  if(
+    EXISTS "${_UFDTD_CONDA_LIBRARY}/include/mpi.h"
+    AND EXISTS "${_UFDTD_CONDA_LIBRARY}/lib/msmpi.lib"
+  )
+    set(ENV{MSMPI_BIN} "${_UFDTD_CONDA_LIBRARY}/bin")
+    set(ENV{MSMPI_INC} "${_UFDTD_CONDA_LIBRARY}/include")
+    set(ENV{MSMPI_LIB64} "${_UFDTD_CONDA_LIBRARY}/lib")
+  endif()
+  unset(_UFDTD_CONDA_LIBRARY)
+endif()
+
+find_package(MPI REQUIRED COMPONENTS C)
+add_executable(mpi_smoke examples/smoke/mpi_smoke.c)
+target_compile_features(mpi_smoke PRIVATE c_std_17)
+target_link_libraries(mpi_smoke PRIVATE ufdtd_warnings MPI::MPI_C)
+add_test(
+  NAME mpi_smoke
+  COMMAND
+    "${MPIEXEC_EXECUTABLE}"
+    "${MPIEXEC_NUMPROC_FLAG}" "4"
+    ${MPIEXEC_PREFLAGS}
+    "$<TARGET_FILE:mpi_smoke>"
+    ${MPIEXEC_POSTFLAGS}
+)
+set_tests_properties(mpi_smoke PROPERTIES TIMEOUT 30)
