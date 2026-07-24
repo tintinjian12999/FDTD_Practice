@@ -110,11 +110,31 @@ def invalid_case(directory: Path, case: str) -> None:
         (directory / "run.json").write_text(
             json.dumps(metadata), encoding="utf-8"
         )
+    elif case == "units":
+        metadata = dict(METADATA, position_unit="meters")
+        (directory / "run.json").write_text(
+            json.dumps(metadata), encoding="utf-8"
+        )
+    elif case == "scale-values":
+        metadata = dict(METADATA, dt=0.5)
+        (directory / "run.json").write_text(
+            json.dumps(metadata), encoding="utf-8"
+        )
 
 
 @pytest.mark.parametrize(
     "case",
-    ["header", "nan", "duplicate", "missing", "time", "grid", "metadata"],
+    [
+        "header",
+        "nan",
+        "duplicate",
+        "missing",
+        "time",
+        "grid",
+        "metadata",
+        "units",
+        "scale-values",
+    ],
 )
 def test_malformed_data_is_rejected(tmp_path: Path, case: str) -> None:
     directory = tmp_path / case

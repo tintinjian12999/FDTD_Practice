@@ -24,6 +24,7 @@ METADATA_KEYS = {
 }
 PROBE_HEADER = ["time_step", "time", "ez"]
 SNAPSHOT_HEADER = ["time_step", "time", "index", "position", "ez"]
+C0 = 299_792_458.0
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,27 @@ def _validate_metadata(metadata: RunMetadata) -> None:
         raise ValueError("dx and dt must be positive")
     if not 0 <= metadata.probe_index < metadata.grid_size:
         raise ValueError("probe index is outside the grid")
+    if not 0 <= metadata.source_index < metadata.grid_size:
+        raise ValueError("source index is outside the grid")
+    expected_units = (
+        ("normalized", "cells")
+        if metadata.scale == "normalized"
+        else ("seconds", "meters")
+    )
+    if (metadata.time_unit, metadata.position_unit) != expected_units:
+        raise ValueError("units do not match the selected scale")
+    if metadata.scale == "normalized":
+        consistent = math.isclose(metadata.dx, 1.0) and math.isclose(
+            metadata.dt, metadata.courant, rel_tol=1e-12
+        )
+    else:
+        consistent = math.isclose(
+            metadata.courant,
+            C0 * metadata.dt / metadata.dx,
+            rel_tol=1e-12,
+        )
+    if not consistent:
+        raise ValueError("dx, dt, and Courant number are inconsistent")
 
 
 def _load_metadata(path: Path) -> RunMetadata:

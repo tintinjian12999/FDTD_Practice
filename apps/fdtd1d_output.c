@@ -34,6 +34,25 @@ static int ensure_directory(const char *path)
         && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0U;
 }
 
+static size_t directory_scan_start(const char *path, size_t length)
+{
+    const char *separator;
+
+    if (length >= 3U && path[1] == ':' && path[2] == '\\') {
+        return 3U;
+    }
+    if (length >= 2U && path[0] == '\\' && path[1] == '\\') {
+        separator = strchr(path + 2, '\\');
+        if (separator != NULL) {
+            separator = strchr(separator + 1, '\\');
+        }
+        return separator == NULL
+            ? length
+            : (size_t)(separator - path) + 1U;
+    }
+    return length > 0U && path[0] == '\\' ? 1U : 0U;
+}
+
 static int create_directory_tree(const char *directory)
 {
     char path[MAX_PATH];
@@ -49,7 +68,7 @@ static int create_directory_tree(const char *directory)
             path[index] = '\\';
         }
     }
-    for (index = 3U; index < length; ++index) {
+    for (index = directory_scan_start(path, length); index < length; ++index) {
         if (path[index] != '\\') {
             continue;
         }

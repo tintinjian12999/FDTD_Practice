@@ -153,3 +153,17 @@ def test_repeated_run_replaces_previous_data(tmp_path: Path) -> None:
     _, snapshot_rows = read_csv(output / "snapshots.csv")
     assert len(probe_rows) == 10
     assert len(snapshot_rows) == 2 * 20
+
+
+def test_short_relative_nested_output_path(tmp_path: Path) -> None:
+    arguments = small_arguments(Path("a") / "b", time_steps=5)
+    result = subprocess.run(
+        [EXECUTABLE, *(str(argument) for argument in arguments)],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "a" / "b" / "run.json").is_file()
