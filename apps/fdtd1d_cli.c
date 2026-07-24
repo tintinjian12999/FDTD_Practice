@@ -298,13 +298,35 @@ static int parse_arguments(
     return validate_scale_options(options, error, error_size);
 }
 
+static int execute_steps(
+    struct FDTD1D *simulation,
+    FDTD1DOutput *output,
+    char *error,
+    size_t error_size
+)
+{
+    enum FDTD1DStatus status;
+
+    while ((status = fdtd1d_step(simulation)) == FDTD1D_OK) {
+        if (!fdtd1d_output_write(
+            output, simulation, error, error_size
+        )) {
+            return 0;
+        }
+    }
+    if (status != FDTD1D_FINISHED) {
+        (void)snprintf(error, error_size, "Simulation failed.");
+        return 0;
+    }
+    return 1;
+}
+
 static int run_simulation(const CliOptions *options)
 {
     char error[256] = {0};
     struct FDTD1D *simulation =
         fdtd1d_create(&options->config, error, sizeof(error));
     FDTD1DOutput *output;
-    enum FDTD1DStatus status;
     int success = 1;
 
     if (simulation == NULL) {
@@ -320,18 +342,7 @@ static int run_simulation(const CliOptions *options)
         fdtd1d_destroy(simulation);
         return 1;
     }
-    while ((status = fdtd1d_step(simulation)) == FDTD1D_OK) {
-        if (!fdtd1d_output_write(output, simulation, error, sizeof(error))) {
-            success = 0;
-            break;
-        }
-    }
-    if (status != FDTD1D_FINISHED) {
-        success = 0;
-        if (error[0] == '\0') {
-            (void)snprintf(error, sizeof(error), "Simulation failed.");
-        }
-    }
+    success = execute_steps(simulation, output, error, sizeof(error));
     if (!fdtd1d_output_close(output, error, sizeof(error))) {
         success = 0;
     }

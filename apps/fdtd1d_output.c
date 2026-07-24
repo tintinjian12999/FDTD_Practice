@@ -83,23 +83,12 @@ static const char *scale_name(enum FDTD1DScale scale)
     return scale == FDTD1D_SI ? "si" : "normalized";
 }
 
-static int write_metadata(
-    const char *directory,
+static int write_metadata_body(
+    FILE *stream,
     const struct FDTD1DConfig *config
 )
 {
-    char path[MAX_PATH];
-    FILE *stream;
-    int result;
-
-    if (!join_path(path, sizeof(path), directory, "run.json")) {
-        return 0;
-    }
-    stream = fopen(path, "w");
-    if (stream == NULL) {
-        return 0;
-    }
-    result = fprintf(
+    return fprintf(
         stream,
         "{\n"
         "  \"schema_version\": 1,\n"
@@ -126,8 +115,27 @@ static int write_metadata(
         config->source_amplitude, config->snapshot_interval,
         config->scale == FDTD1D_SI ? "seconds" : "normalized",
         config->scale == FDTD1D_SI ? "meters" : "cells"
-    );
-    return fclose(stream) == 0 && result >= 0;
+    ) >= 0;
+}
+
+static int write_metadata(
+    const char *directory,
+    const struct FDTD1DConfig *config
+)
+{
+    char path[MAX_PATH];
+    FILE *stream;
+    int success;
+
+    if (!join_path(path, sizeof(path), directory, "run.json")) {
+        return 0;
+    }
+    stream = fopen(path, "w");
+    if (stream == NULL) {
+        return 0;
+    }
+    success = write_metadata_body(stream, config);
+    return fclose(stream) == 0 && success;
 }
 
 static FILE *open_output_file(
