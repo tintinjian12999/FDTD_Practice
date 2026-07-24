@@ -72,14 +72,17 @@ def test_result_plot_navigates_and_controls_animation() -> None:
     metadata, probe, snapshots = sample_run()
     root = tk.Tk()
     root.withdraw()
+    observed_frames: list[int] = []
     try:
-        plot = ResultPlot(root)
+        plot = ResultPlot(root, observed_frames.append)
         plot.show_run(metadata, probe, snapshots)
         assert plot.frame_count == 2
         assert plot.current_frame == 0
+        assert observed_frames[-1] == 0
 
         plot.set_frame(999)
         assert plot.current_frame == 1
+        assert observed_frames[-1] == 1
         plot.previous_frame()
         assert plot.current_frame == 0
         plot.next_frame()

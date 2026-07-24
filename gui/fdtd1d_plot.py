@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import tkinter as tk
+from typing import Callable
 
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
@@ -52,8 +53,13 @@ def prepare_frames(
 
 
 class ResultPlot:
-    def __init__(self, parent: tk.Misc) -> None:
+    def __init__(
+        self,
+        parent: tk.Misc,
+        on_frame_changed: Callable[[int], None] | None = None,
+    ) -> None:
         self._parent = parent
+        self._on_frame_changed = on_frame_changed
         self.figure = Figure(figsize=(8.5, 6.2), dpi=100)
         self.probe_axis = self.figure.add_subplot(211)
         self.field_axis = self.figure.add_subplot(212)
@@ -135,6 +141,8 @@ class ResultPlot:
         step = int(self._frames.steps[bounded])
         self.field_axis.set_title(f"Electric field at time step {step}")
         self.canvas.draw_idle()
+        if self._on_frame_changed is not None:
+            self._on_frame_changed(bounded)
 
     def next_frame(self) -> None:
         self.set_frame(self._current_frame + 1)
