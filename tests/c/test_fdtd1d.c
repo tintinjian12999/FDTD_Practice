@@ -137,8 +137,11 @@ static int compare_fields(
 {
     const double *left_electric = fdtd1d_electric(left);
     const double *right_electric = fdtd1d_electric(right);
+    const double *left_magnetic = fdtd1d_magnetic(left);
+    const double *right_magnetic = fdtd1d_magnetic(right);
     for (size_t index = 0U; index < grid_size; ++index) {
-        if (fabs(left_electric[index] - right_electric[index]) > 1.0e-12) {
+        if (fabs(left_electric[index] - right_electric[index]) > 1.0e-12
+            || fabs(left_magnetic[index] - right_magnetic[index]) > 1.0e-12) {
             return 1;
         }
     }

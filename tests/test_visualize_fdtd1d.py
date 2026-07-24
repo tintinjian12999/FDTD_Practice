@@ -26,6 +26,16 @@ METADATA = {
     "time_unit": "normalized",
     "position_unit": "cells",
 }
+METADATA_MUTATIONS = {
+    "grid": {"grid_size": 6},
+    "metadata": {"time_steps": 4},
+    "units": {"position_unit": "meters"},
+    "scale-values": {"dt": 0.5},
+    "source-width": {"source_width": 0.0},
+    "source-delay": {"source_delay": -1.0},
+    "hard-source": {"mode": "hard-pmc"},
+    "additive-source": {"source_index": 0},
+}
 
 
 def write_csv(path: Path, header: list[str], rows: list[list[object]]) -> None:
@@ -80,7 +90,9 @@ def test_valid_run_creates_plots_and_animation(tmp_path: Path) -> None:
 
 
 def invalid_case(directory: Path, case: str) -> None:
-    if case == "header":
+    if case in METADATA_MUTATIONS:
+        write_metadata_override(directory, **METADATA_MUTATIONS[case])
+    elif case == "header":
         path = directory / "probe.csv"
         path.write_text(
             path.read_text(encoding="utf-8").replace("time_step", "step", 1),
@@ -107,14 +119,13 @@ def invalid_case(directory: Path, case: str) -> None:
             path.read_text(encoding="utf-8").replace("2,2.0,0.2", "2,0,0.2"),
             encoding="utf-8",
         )
-    elif case == "grid":
-        write_metadata_override(directory, grid_size=6)
-    elif case == "metadata":
-        write_metadata_override(directory, time_steps=4)
-    elif case == "units":
-        write_metadata_override(directory, position_unit="meters")
-    elif case == "scale-values":
-        write_metadata_override(directory, dt=0.5)
+    elif case == "duplicate-key":
+        path = directory / "run.json"
+        text = path.read_text(encoding="utf-8")
+        path.write_text(
+            text.replace("{", '{"schema_version": 1,', 1),
+            encoding="utf-8",
+        )
 
 
 @pytest.mark.parametrize(
@@ -129,6 +140,11 @@ def invalid_case(directory: Path, case: str) -> None:
         "metadata",
         "units",
         "scale-values",
+        "source-width",
+        "source-delay",
+        "hard-source",
+        "additive-source",
+        "duplicate-key",
     ],
 )
 def test_malformed_data_is_rejected(tmp_path: Path, case: str) -> None:
@@ -156,3 +172,37 @@ def test_invalid_input_preserves_existing_images(tmp_path: Path) -> None:
         visualize(directory)
 
     assert all(path.read_bytes() == b"unchanged" for path in outputs)
+
+
+def test_huge_probe_metadata_is_rejected_before_allocation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "huge-probe"
+    write_valid_run(directory)
+    write_metadata_override(directory, time_steps=10**12)
+    original = __import__("numpy").arange
+
+    def guarded_arange(*args: object, **kwargs: object) -> object:
+        stop = args[0] if len(args) == 1 else args[1]
+        if int(stop) > 1_000_000:
+            raise AssertionError("large allocation attempted")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr("scripts.visualize_fdtd1d.np.arange", guarded_arange)
+    with pytest.raises(ValueError):
+        load_run(directory)
+
+
+def test_huge_snapshot_metadata_is_rejected_before_allocation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    directory = tmp_path / "huge-snapshot"
+    write_valid_run(directory)
+    write_metadata_override(directory, grid_size=10**12)
+
+    def guarded_repeat(*args: object, **kwargs: object) -> object:
+        raise AssertionError("large allocation attempted")
+
+    monkeypatch.setattr("scripts.visualize_fdtd1d.np.repeat", guarded_repeat)
+    with pytest.raises(ValueError):
+        load_run(directory)

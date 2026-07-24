@@ -105,6 +105,19 @@ def _construct_metadata(raw: dict[str, object]) -> RunMetadata:
     )
 
 
+def _validate_source_metadata(metadata: RunMetadata) -> None:
+    if metadata.source_delay < 0:
+        raise ValueError("source delay must be nonnegative")
+    if metadata.source_width <= 0:
+        raise ValueError("source width must be positive")
+    if metadata.mode == "hard-pmc" and metadata.source_index != 0:
+        raise ValueError("hard-pmc requires source index 0")
+    if metadata.mode == "additive-abc" and not (
+        2 <= metadata.source_index <= metadata.grid_size - 3
+    ):
+        raise ValueError("additive source is too close to a boundary")
+
+
 def _validate_metadata(metadata: RunMetadata) -> None:
     if metadata.schema_version != 1:
         raise ValueError("unsupported metadata schema")
@@ -112,8 +125,8 @@ def _validate_metadata(metadata: RunMetadata) -> None:
         raise ValueError("invalid mode")
     if metadata.scale not in {"normalized", "si"}:
         raise ValueError("invalid scale")
-    if metadata.grid_size < 1 or metadata.time_steps < 1:
-        raise ValueError("grid and time dimensions must be positive")
+    if metadata.grid_size < 5 or metadata.time_steps < 1:
+        raise ValueError("grid or time dimension is invalid")
     if metadata.snapshot_interval < 1:
         raise ValueError("snapshot interval must be positive")
     if not 0 < metadata.courant <= 1:
@@ -124,6 +137,7 @@ def _validate_metadata(metadata: RunMetadata) -> None:
         raise ValueError("probe index is outside the grid")
     if not 0 <= metadata.source_index < metadata.grid_size:
         raise ValueError("source index is outside the grid")
+    _validate_source_metadata(metadata)
     expected_units = (
         ("normalized", "cells")
         if metadata.scale == "normalized"
@@ -145,9 +159,21 @@ def _validate_metadata(metadata: RunMetadata) -> None:
         raise ValueError("dx, dt, and Courant number are inconsistent")
 
 
+def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate metadata key: {key}")
+        result[key] = value
+    return result
+
+
 def _load_metadata(path: Path) -> RunMetadata:
     try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
+        raw = json.loads(
+            path.read_text(encoding="utf-8"),
+            object_pairs_hook=_unique_object,
+        )
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"invalid metadata: {error}") from error
     if not isinstance(raw, dict) or set(raw) != METADATA_KEYS:
@@ -190,6 +216,8 @@ def _parse_float_column(rows: list[list[str]], column: int) -> np.ndarray:
 
 def _load_probe(directory: Path, metadata: RunMetadata) -> ProbeData:
     rows = _read_rows(directory / "probe.csv", PROBE_HEADER)
+    if len(rows) != metadata.time_steps:
+        raise ValueError("probe row count does not match metadata")
     data = ProbeData(
         _parse_int_column(rows, 0),
         _parse_float_column(rows, 1),
@@ -206,6 +234,11 @@ def _load_probe(directory: Path, metadata: RunMetadata) -> ProbeData:
 
 def _load_snapshots(directory: Path, metadata: RunMetadata) -> SnapshotData:
     rows = _read_rows(directory / "snapshots.csv", SNAPSHOT_HEADER)
+    group_count = (
+        (metadata.time_steps - 1) // metadata.snapshot_interval + 1
+    )
+    if len(rows) != group_count * metadata.grid_size:
+        raise ValueError("snapshot row count does not match metadata")
     data = SnapshotData(
         _parse_int_column(rows, 0),
         _parse_float_column(rows, 1),
