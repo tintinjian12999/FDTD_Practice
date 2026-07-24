@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ufdtd
+  description: Native Windows C environment for FDTD learning and development
+spec:
+  type: library
+  lifecycle: experimental
+  owner: user:default/tim_chien
+  system: unassigned
+  dependsOn: []
+  providesApis: []
+  consumesApis: []

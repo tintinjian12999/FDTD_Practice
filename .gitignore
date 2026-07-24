@@ -1,0 +1,14 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+output/
+CMakeUserPresets.json
+ufdtd.pdf
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

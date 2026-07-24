@@ -1,0 +1,4 @@
+include:
+  - project: 'GFI-AutoDevTeam/WebServerCore/DiConAtlas'
+    ref: v1
+    file: 'ci/atlas-validate.yml'
