@@ -158,7 +158,8 @@ The GUI starts with the CLI defaults:
 - time steps 450;
 - Courant number 1;
 - `dx = 0.01 m`;
-- `dt = 3.3356409519815207e-11 s`;
+- `dt = 3.33564095198152e-11 s`, the next safe binary64 value below the
+  exact unit-Courant boundary;
 - source index 50;
 - probe index 100;
 - delay 30;
