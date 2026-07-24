@@ -13,3 +13,4 @@ dependencies:
   - matplotlib>=3.11,<4
   - pillow>=12,<13
   - pytest>=9,<10
+  - tk>=8.6,<9

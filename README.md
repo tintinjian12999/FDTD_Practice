@@ -90,6 +90,32 @@ python -m scripts.visualize_fdtd1d output\fdtd1d
 再原子式產生 `probe.png`、`snapshot_final.png` 和 `field.gif`。無效資料不會
 覆寫既有圖檔。
 
+### Windows 桌面 GUI
+
+必須先啟用完整的 Conda 環境，讓 Tk 與 Matplotlib 的原生 DLL 可被找到：
+
+```powershell
+conda activate ufdtd-c
+python -m gui.fdtd1d_gui
+```
+
+若目前 PowerShell 尚未初始化 `conda activate`，可直接使用：
+
+```powershell
+& "$env:LOCALAPPDATA\miniconda3\Scripts\conda.exe" run `
+  -n ufdtd-c --no-capture-output python -m gui.fdtd1d_gui
+```
+
+GUI 左側提供模式、尺度、網格、激發、探針與輸出目錄設定。切換尺度會只啟用
+有效的 Courant 或 `dx`/`dt` 欄位；切換 `hard-pmc` 會將源位置設為 0。
+`Run / 執行` 會在背景呼叫同一支 C CLI，因此視窗保持可操作；`Cancel / 取消`
+只會終止 GUI 自己啟動的求解器程序。
+
+若輸出目錄已有已知的 FDTD 檔案，GUI 會在覆寫前要求確認。成功後右側顯示
+探針時間序列與場快照，可用 Previous/Next、滑桿與 Play/Pause 檢視傳播。
+失敗或無效的執行會保留上一份已驗證結果，詳細 stdout/stderr 顯示於執行紀錄。
+GUI 優先使用 `build/release/fdtd1d.exe`，不存在時才使用 Debug 版本。
+
 ### 執行自己的 C 程式
 
 將程式放在 `examples/`，並在 `CMakeLists.txt` 加入獨立 target，例如：
@@ -114,7 +140,7 @@ target_link_libraries(my_fdtd PRIVATE ufdtd_fdtd1d)
 數值回歸、命令列輸出、嚴格資料驗證與圖像生成。
 
 第一版只支援一維、均勻自由空間、Gaussian 激發、單一探針，以及一階 Mur
-ABC；尚未包含介質、損耗、色散、TFSF、PML、二維／三維或 GUI。
+ABC；尚未包含介質、損耗、色散、TFSF、PML、二維／三維或獨立安裝程式。
 
 ## English
 
@@ -178,6 +204,33 @@ python -m scripts.visualize_fdtd1d output\fdtd1d
 This creates `probe.png`, `snapshot_final.png`, and `field.gif` only after all
 input files pass schema and numerical checks.
 
+### Windows desktop GUI
+
+Activate the complete Conda environment before launching so Tk and Matplotlib
+can locate their native DLLs:
+
+```powershell
+conda activate ufdtd-c
+python -m gui.fdtd1d_gui
+```
+
+If `conda activate` is not initialized in the current PowerShell session:
+
+```powershell
+& "$env:LOCALAPPDATA\miniconda3\Scripts\conda.exe" run `
+  -n ufdtd-c --no-capture-output python -m gui.fdtd1d_gui
+```
+
+The left pane exposes mode, scale, grid, source, probe, and output settings.
+Only the active normalized or SI scale fields are enabled. Run launches the
+same C CLI on a background worker, Cancel terminates only the process owned by
+the GUI, and recognized output files require confirmation before replacement.
+
+After a successful strict load, the right pane displays the probe history and
+field snapshots with previous/next buttons, a slider, and play/pause. Failed or
+invalid runs preserve the last valid display and append stdout/stderr to the
+execution log. Release `fdtd1d.exe` is preferred, with Debug as fallback.
+
 To build your own source, place it under `examples/`, add a distinct
 `add_executable` target to `CMakeLists.txt`, link `ufdtd_fdtd1d` when the shared
 core is needed, reconfigure, and build.
@@ -191,4 +244,5 @@ workflow with:
 
 The first solver version is limited to one-dimensional uniform free space, a
 Gaussian source, one probe, and first-order Mur ABC. Materials, loss,
-dispersion, TFSF, PML, two/three dimensions, and a GUI are not yet included.
+dispersion, TFSF, PML, two/three dimensions, and a standalone installer are not
+yet included.

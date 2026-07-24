@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Added a native Windows Tkinter GUI that configures and runs the C solver
+  without duplicating the numerical implementation.
+- Added responsive background execution, owned-process cancellation, output
+  replacement confirmation, bilingual controls, execution logging, and strict
+  result loading.
+- Added embedded Matplotlib probe and field plots with snapshot navigation and
+  animation playback.
+- Added GUI parameter, process lifecycle, visible-window, plotting, and real
+  solver integration tests plus a noninteractive environment check.
 - Added a book-faithful C17 reproduction of Program 3.1 with a numerical peak
   regression.
 - Added a reusable one-dimensional Yee-grid FDTD core with hard-source and

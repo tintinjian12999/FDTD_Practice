@@ -69,6 +69,9 @@ try {
         'python', '-m', 'pytest', '-q'
     )
     Invoke-InEnvironment -Conda $conda -Arguments @(
+        'python', '-m', 'gui.fdtd1d_gui', '--check'
+    )
+    Invoke-InEnvironment -Conda $conda -Arguments @(
         'python',
         'scripts/plot_signal.py',
         'output/smoke/signal.csv',
@@ -123,4 +126,4 @@ finally {
     Pop-Location
 }
 
-Write-Host 'Debug, Release, MPI, FDTD, Python, and plotting checks passed.'
+Write-Host 'Debug, Release, MPI, FDTD, GUI, Python, and plotting checks passed.'
