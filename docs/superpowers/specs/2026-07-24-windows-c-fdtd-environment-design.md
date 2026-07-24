@@ -57,6 +57,7 @@ Create a dedicated Conda environment named `ufdtd-c` from conda-forge with
 strict channel priority. The top-level dependency constraints will be:
 
 - `gcc_win-64=15.2`
+- `gcc=15.2`
 - `cmake>=4.4,<5`
 - `ninja>=1.13,<2`
 - `msmpi=10.1.1`
@@ -66,8 +67,9 @@ strict channel priority. The top-level dependency constraints will be:
 - `pytest>=9,<10`
 
 The environment file will not name the legacy `winpthreads` package.
-`gcc_win-64` will supply the compatible `libwinpthread` dependency. Bootstrap
-commands will use `--override-channels` so packages do not leak in from the
+`gcc_win-64` will supply the compiler and compatible `libwinpthread`
+dependency, while `gcc` supplies the standard `gcc.exe` command shim. The
+channel list will end with `nodefaults` so packages do not leak in from the
 user's global Conda channel configuration.
 
 The project will invoke tools through `conda run -n ufdtd-c` so verification

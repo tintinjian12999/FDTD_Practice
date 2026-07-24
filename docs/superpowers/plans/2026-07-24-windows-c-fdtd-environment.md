@@ -72,7 +72,9 @@ Create `environment.yml`:
 name: ufdtd-c
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
+  - gcc=15.2
   - gcc_win-64=15.2
   - cmake>=4.4,<5
   - ninja>=1.13,<2
@@ -88,7 +90,7 @@ dependencies:
 Run:
 
 ```powershell
-& $conda env create --dry-run --file environment.yml --override-channels
+& $conda env create --dry-run --file environment.yml
 ```
 
 Expected: output includes `gcc_impl_win-64-15.2`, `libwinpthread`, `msmpi-10.1.1`, `cmake`, `ninja`, and `DryRunExit`.
@@ -98,7 +100,7 @@ Expected: output includes `gcc_impl_win-64-15.2`, `libwinpthread`, `msmpi-10.1.1
 Run:
 
 ```powershell
-& $conda env create --file environment.yml --override-channels
+& $conda env create --file environment.yml
 ```
 
 Expected: command exits with code 0 and `conda env list` includes `ufdtd-c`.
@@ -785,9 +787,9 @@ $targetExists = $environments | Where-Object {
 }
 
 if ($targetExists) {
-    & $conda env update -n ufdtd-c -f $environmentFile --override-channels
+    & $conda env update -n ufdtd-c -f $environmentFile
 } else {
-    & $conda env create -f $environmentFile --override-channels
+    & $conda env create -f $environmentFile
 }
 if ($LASTEXITCODE -ne 0) {
     throw 'Failed to create or update the ufdtd-c environment.'
