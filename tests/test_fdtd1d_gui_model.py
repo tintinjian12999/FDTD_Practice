@@ -67,6 +67,7 @@ def test_si_command_emits_only_si_scale_values() -> None:
         ("courant", "1.01"),
         ("courant", "inf"),
         ("output_directory", ""),
+        ("output_directory", "   "),
         ("output_directory", "x" * 260),
     ],
 )

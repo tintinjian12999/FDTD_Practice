@@ -124,8 +124,11 @@ def validate_parameters(parameters: SimulationParameters) -> None:
     grid, _, source, _, _ = _shape_values(parameters)
     _validate_source(parameters, grid, source)
     _validate_scale(parameters)
-    if not parameters.output_directory:
-        raise ValueError("output directory must not be empty")
+    if (
+        not parameters.output_directory
+        or parameters.output_directory != parameters.output_directory.strip()
+    ):
+        raise ValueError("output directory must not be empty or padded")
     if len(parameters.output_directory) >= 260:
         raise ValueError("output directory must be shorter than MAX_PATH")
 
