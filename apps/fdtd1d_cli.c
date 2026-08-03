@@ -99,7 +99,7 @@ static int parse_double_value(const char *text, double *value)
     return 1;
 }
 
-static int parse_source_boundary_or_scale(
+static int parse_enum_option(
     CliOptions *options,
     const char *name,
     const char *value
@@ -223,7 +223,7 @@ static int parse_option(
     const char *value
 )
 {
-    int result = parse_source_boundary_or_scale(options, name, value);
+    int result = parse_enum_option(options, name, value);
 
     if (result < 0) {
         result = parse_size_option(options, name, value);

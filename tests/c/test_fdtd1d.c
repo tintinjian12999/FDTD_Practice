@@ -54,6 +54,12 @@ static int test_invalid_configurations(void)
     config = fdtd1d_default_normalized();
     config.probe_index = config.grid_size;
     CHECK(validate_fails(config));
+    config = fdtd1d_default_normalized();
+    config.source.injection = (enum FDTD1DSourceInjection)99;
+    CHECK(validate_fails(config));
+    config = fdtd1d_default_normalized();
+    config.boundary = (enum FDTD1DBoundaryType)99;
+    CHECK(validate_fails(config));
     return 0;
 }
 
@@ -224,6 +230,36 @@ static int test_pmc_boundary_matches_endpoint_neighbors(void)
     return 0;
 }
 
+static int test_pmc_reflection_is_not_inverted(void)
+{
+    char error[256];
+    struct FDTD1DConfig config = fdtd1d_default_normalized();
+    config.boundary = FDTD1D_BOUNDARY_PMC;
+    config.grid_size = 101U;
+    config.source.index = 50U;
+    config.probe_index = 50U;
+    config.time_steps = 140U;
+    config.source.delay_steps = 20.0;
+    config.source.width_steps = 6.0;
+    struct FDTD1D *simulation =
+        fdtd1d_create(&config, error, sizeof(error));
+    CHECK(simulation != NULL);
+
+    double maximum = 0.0;
+    double minimum = 0.0;
+    while (fdtd1d_step(simulation) == FDTD1D_OK) {
+        if (fdtd1d_current_step(simulation) >= 100U) {
+            const double value = fdtd1d_electric(simulation)[config.probe_index];
+            maximum = value > maximum ? value : maximum;
+            minimum = value < minimum ? value : minimum;
+        }
+    }
+    CHECK(maximum > 0.9);
+    CHECK(minimum > -1.0e-4);
+    fdtd1d_destroy(simulation);
+    return 0;
+}
+
 static int test_absorbing_boundary_residual(void)
 {
     char error[256];
@@ -262,6 +298,7 @@ int main(void)
     CHECK(test_source_boundary_combinations() == 0);
     CHECK(test_normalized_si_equivalence() == 0);
     CHECK(test_pmc_boundary_matches_endpoint_neighbors() == 0);
+    CHECK(test_pmc_reflection_is_not_inverted() == 0);
     CHECK(test_absorbing_boundary_residual() == 0);
     printf("FDTD1D core tests passed.\n");
     return 0;

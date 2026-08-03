@@ -281,8 +281,9 @@ class FDTD1DApplication:
 
     def _update_source_warning(self) -> None:
         warning = (
-            "Hard source is non-transparent and can reflect returning waves. "
-            "/ Hard source 非透明，返回波會在源位置產生反射。"
+            "Hard source continuously overwrites the source cell, is "
+            "non-transparent, and can reflect returning waves. / Hard source "
+            "會持續覆寫源網格、並非透明源，返回波會在源位置產生反射。"
             if self.variables["source"].get() == "hard"
             else ""
         )

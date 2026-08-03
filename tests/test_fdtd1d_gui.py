@@ -77,6 +77,7 @@ def test_application_constructs_and_switches_scale_and_source() -> None:
         "assert str(app.entries['courant'].cget('state')) == 'disabled'; "
         "assert str(app.entries['dx'].cget('state')) == 'normal'; "
         "assert app.variables['source_index'].get() == original; "
+        "assert 'continuously overwrites' in app.source_warning_text.get(); "
         "assert 'non-transparent' in app.source_warning_text.get(); "
         "app._playing=True; app.play_button.configure(text='Pause'); "
         "app._reset_playback(); assert not app._playing; "
