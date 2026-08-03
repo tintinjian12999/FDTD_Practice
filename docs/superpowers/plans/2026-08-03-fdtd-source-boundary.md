@@ -48,4 +48,3 @@ preserving the existing additive/Mur numerical behavior.
 - `feat: separate source and boundary GUI controls`
 - `docs: document independent source and boundary experiments`
 - review fixes, if required, in a focused final commit
-

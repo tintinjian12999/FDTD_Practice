@@ -166,4 +166,3 @@ Additional requirements are:
 - schema version 2 strict loading;
 - GUI command construction, warning state, and pre-launch validation;
 - full Debug, Release, CTest, Pytest, GUI, numerical, and visualization checks.
-
