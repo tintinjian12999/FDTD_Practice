@@ -11,6 +11,13 @@ struct FDTD1D {
     size_t completed_steps;
 };
 
+struct FDTD1DBoundaryHistory {
+    double left;
+    double left_neighbor;
+    double right;
+    double right_neighbor;
+};
+
 static enum FDTD1DStatus invalid(
     char *error,
     size_t error_size,
@@ -58,9 +65,13 @@ static enum FDTD1DStatus validate_enums(
     size_t error_size
 )
 {
-    if (config->mode != FDTD1D_HARD_PMC
-        && config->mode != FDTD1D_ADDITIVE_ABC) {
-        return invalid(error, error_size, "mode is invalid");
+    if (config->source.injection != FDTD1D_SOURCE_HARD
+        && config->source.injection != FDTD1D_SOURCE_ADDITIVE) {
+        return invalid(error, error_size, "source injection is invalid");
+    }
+    if (config->boundary != FDTD1D_BOUNDARY_PMC
+        && config->boundary != FDTD1D_BOUNDARY_MUR1) {
+        return invalid(error, error_size, "boundary is invalid");
     }
     if (config->scale != FDTD1D_NORMALIZED
         && config->scale != FDTD1D_SI) {
@@ -75,22 +86,20 @@ static enum FDTD1DStatus validate_source(
     size_t error_size
 )
 {
-    if (!isfinite(config->source_delay) || config->source_delay < 0.0) {
-        return invalid(error, error_size, "source_delay must be finite and nonnegative");
+    if (!isfinite(config->source.delay_steps)
+        || config->source.delay_steps < 0.0) {
+        return invalid(error, error_size, "source delay must be finite and nonnegative");
     }
-    if (!isfinite(config->source_width) || config->source_width <= 0.0) {
-        return invalid(error, error_size, "source_width must be finite and positive");
+    if (!isfinite(config->source.width_steps)
+        || config->source.width_steps <= 0.0) {
+        return invalid(error, error_size, "source width must be finite and positive");
     }
-    if (!isfinite(config->source_amplitude)) {
-        return invalid(error, error_size, "source_amplitude must be finite");
+    if (!isfinite(config->source.amplitude)) {
+        return invalid(error, error_size, "source amplitude must be finite");
     }
-    if (config->mode == FDTD1D_HARD_PMC && config->source_index != 0U) {
-        return invalid(error, error_size, "hard-pmc requires source_index 0");
-    }
-    if (config->mode == FDTD1D_ADDITIVE_ABC
-        && (config->source_index < 2U
-            || config->source_index > config->grid_size - 3U)) {
-        return invalid(error, error_size, "additive source is too close to a boundary");
+    if (config->source.index < 2U
+        || config->source.index > config->grid_size - 3U) {
+        return invalid(error, error_size, "source is too close to a boundary");
     }
     return FDTD1D_OK;
 }
@@ -116,19 +125,22 @@ static enum FDTD1DStatus validate_scale(
 struct FDTD1DConfig fdtd1d_default_normalized(void)
 {
     return (struct FDTD1DConfig) {
-        FDTD1D_ADDITIVE_ABC,
-        FDTD1D_NORMALIZED,
-        200U,
-        450U,
-        50U,
-        100U,
-        10U,
-        1.0,
-        1.0,
-        1.0,
-        30.0,
-        10.0,
-        1.0
+        .scale = FDTD1D_NORMALIZED,
+        .boundary = FDTD1D_BOUNDARY_MUR1,
+        .source = {
+            .injection = FDTD1D_SOURCE_ADDITIVE,
+            .index = 50U,
+            .delay_steps = 30.0,
+            .width_steps = 10.0,
+            .amplitude = 1.0
+        },
+        .grid_size = 200U,
+        .time_steps = 450U,
+        .probe_index = 100U,
+        .snapshot_interval = 10U,
+        .courant = 1.0,
+        .dx = 1.0,
+        .dt = 1.0
     };
 }
 
@@ -214,9 +226,10 @@ void fdtd1d_destroy(struct FDTD1D *simulation)
 static double gaussian_source(const struct FDTD1D *simulation)
 {
     const double offset =
-        ((double)simulation->completed_steps - simulation->config.source_delay)
-        / simulation->config.source_width;
-    return simulation->config.source_amplitude * exp(-(offset * offset));
+        ((double)simulation->completed_steps
+            - simulation->config.source.delay_steps)
+        / simulation->config.source.width_steps;
+    return simulation->config.source.amplitude * exp(-(offset * offset));
 }
 
 static void update_magnetic(struct FDTD1D *simulation)
@@ -229,17 +242,6 @@ static void update_magnetic(struct FDTD1D *simulation)
     }
 }
 
-static void update_electric_hard(struct FDTD1D *simulation)
-{
-    const size_t size = simulation->config.grid_size;
-    const double coefficient = simulation->config.courant * FDTD1D_ETA0;
-    for (size_t index = 1U; index < size; ++index) {
-        simulation->ez[index] += coefficient
-            * (simulation->hy[index] - simulation->hy[index - 1U]);
-    }
-    simulation->ez[0] = gaussian_source(simulation);
-}
-
 static void update_electric_interior(struct FDTD1D *simulation)
 {
     const size_t size = simulation->config.grid_size;
@@ -250,46 +252,84 @@ static void update_electric_interior(struct FDTD1D *simulation)
     }
 }
 
-static void apply_additive_source(struct FDTD1D *simulation)
+static void apply_hard_source(
+    struct FDTD1D *simulation,
+    double value
+)
 {
-    simulation->ez[simulation->config.source_index] +=
-        gaussian_source(simulation);
+    simulation->ez[simulation->config.source.index] = value;
+}
+
+static void apply_additive_source(
+    struct FDTD1D *simulation,
+    double value
+)
+{
+    simulation->ez[simulation->config.source.index] += value;
+}
+
+static void apply_source(struct FDTD1D *simulation)
+{
+    const double value = gaussian_source(simulation);
+
+    switch (simulation->config.source.injection) {
+    case FDTD1D_SOURCE_HARD:
+        apply_hard_source(simulation, value);
+        break;
+    case FDTD1D_SOURCE_ADDITIVE:
+        apply_additive_source(simulation, value);
+        break;
+    }
+}
+
+static struct FDTD1DBoundaryHistory capture_boundary_history(
+    const struct FDTD1D *simulation
+)
+{
+    const size_t last = simulation->config.grid_size - 1U;
+    return (struct FDTD1DBoundaryHistory) {
+        simulation->ez[0],
+        simulation->ez[1],
+        simulation->ez[last],
+        simulation->ez[last - 1U]
+    };
 }
 
 static void apply_first_order_abc(
     struct FDTD1D *simulation,
-    double old_left,
-    double old_left_neighbor,
-    double old_right,
-    double old_right_neighbor
+    const struct FDTD1DBoundaryHistory *history
 )
 {
     const size_t last = simulation->config.grid_size - 1U;
     const double coefficient =
         (simulation->config.courant - 1.0)
         / (simulation->config.courant + 1.0);
-    simulation->ez[0] = old_left_neighbor
-        + coefficient * (simulation->ez[1] - old_left);
-    simulation->ez[last] = old_right_neighbor
-        + coefficient * (simulation->ez[last - 1U] - old_right);
+    simulation->ez[0] = history->left_neighbor
+        + coefficient * (simulation->ez[1] - history->left);
+    simulation->ez[last] = history->right_neighbor
+        + coefficient * (simulation->ez[last - 1U] - history->right);
 }
 
-static void update_electric_additive(struct FDTD1D *simulation)
+static void apply_pmc_boundary(struct FDTD1D *simulation)
 {
     const size_t last = simulation->config.grid_size - 1U;
-    const double old_left = simulation->ez[0];
-    const double old_left_neighbor = simulation->ez[1];
-    const double old_right = simulation->ez[last];
-    const double old_right_neighbor = simulation->ez[last - 1U];
-    update_electric_interior(simulation);
-    apply_additive_source(simulation);
-    apply_first_order_abc(
-        simulation,
-        old_left,
-        old_left_neighbor,
-        old_right,
-        old_right_neighbor
-    );
+    simulation->ez[0] = simulation->ez[1];
+    simulation->ez[last] = simulation->ez[last - 1U];
+}
+
+static void apply_boundary(
+    struct FDTD1D *simulation,
+    const struct FDTD1DBoundaryHistory *history
+)
+{
+    switch (simulation->config.boundary) {
+    case FDTD1D_BOUNDARY_PMC:
+        apply_pmc_boundary(simulation);
+        break;
+    case FDTD1D_BOUNDARY_MUR1:
+        apply_first_order_abc(simulation, history);
+        break;
+    }
 }
 
 static int fields_are_finite(const struct FDTD1D *simulation)
@@ -311,12 +351,12 @@ enum FDTD1DStatus fdtd1d_step(struct FDTD1D *simulation)
     if (simulation->completed_steps >= simulation->config.time_steps) {
         return FDTD1D_FINISHED;
     }
+    const struct FDTD1DBoundaryHistory history =
+        capture_boundary_history(simulation);
     update_magnetic(simulation);
-    if (simulation->config.mode == FDTD1D_HARD_PMC) {
-        update_electric_hard(simulation);
-    } else {
-        update_electric_additive(simulation);
-    }
+    update_electric_interior(simulation);
+    apply_source(simulation);
+    apply_boundary(simulation, &history);
     if (!fields_are_finite(simulation)) {
         return FDTD1D_NUMERIC_ERROR;
     }

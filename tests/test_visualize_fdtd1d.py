@@ -1,4 +1,5 @@
 import csv
+from copy import deepcopy
 import json
 from pathlib import Path
 
@@ -9,19 +10,23 @@ from scripts.visualize_fdtd1d import load_run, visualize
 
 
 METADATA = {
-    "schema_version": 1,
-    "mode": "additive-abc",
+    "schema_version": 2,
     "scale": "normalized",
     "grid_size": 5,
     "time_steps": 3,
     "courant": 1.0,
     "dx": 1.0,
     "dt": 1.0,
-    "source_index": 2,
     "probe_index": 3,
-    "source_delay": 1.0,
-    "source_width": 1.0,
-    "source_amplitude": 1.0,
+    "source": {
+        "injection": "additive",
+        "waveform": "gaussian",
+        "index": 2,
+        "delay_steps": 1.0,
+        "width_steps": 1.0,
+        "amplitude": 1.0,
+    },
+    "boundary": {"type": "mur1"},
     "snapshot_interval": 2,
     "time_unit": "normalized",
     "position_unit": "cells",
@@ -31,10 +36,6 @@ METADATA_MUTATIONS = {
     "metadata": {"time_steps": 4},
     "units": {"position_unit": "meters"},
     "scale-values": {"dt": 0.5},
-    "source-width": {"source_width": 0.0},
-    "source-delay": {"source_delay": -1.0},
-    "hard-source": {"mode": "hard-pmc"},
-    "additive-source": {"source_index": 0},
 }
 
 
@@ -67,7 +68,8 @@ def write_valid_run(directory: Path) -> None:
 
 
 def write_metadata_override(directory: Path, **changes: object) -> None:
-    metadata = dict(METADATA, **changes)
+    metadata = deepcopy(METADATA)
+    metadata.update(changes)
     (directory / "run.json").write_text(
         json.dumps(metadata), encoding="utf-8"
     )
@@ -123,8 +125,32 @@ def invalid_case(directory: Path, case: str) -> None:
         path = directory / "run.json"
         text = path.read_text(encoding="utf-8")
         path.write_text(
-            text.replace("{", '{"schema_version": 1,', 1),
+            text.replace("{", '{"schema_version": 2,', 1),
             encoding="utf-8",
+        )
+    elif case in {
+        "source-width",
+        "source-delay",
+        "source-injection",
+        "source-index",
+        "source-waveform",
+        "boundary-type",
+    }:
+        metadata = deepcopy(METADATA)
+        if case == "source-width":
+            metadata["source"]["width_steps"] = 0.0
+        elif case == "source-delay":
+            metadata["source"]["delay_steps"] = -1.0
+        elif case == "source-injection":
+            metadata["source"]["injection"] = "unknown"
+        elif case == "source-index":
+            metadata["source"]["index"] = 0
+        elif case == "source-waveform":
+            metadata["source"]["waveform"] = "sine"
+        else:
+            metadata["boundary"]["type"] = "pec"
+        (directory / "run.json").write_text(
+            json.dumps(metadata), encoding="utf-8"
         )
 
 
@@ -142,8 +168,10 @@ def invalid_case(directory: Path, case: str) -> None:
         "scale-values",
         "source-width",
         "source-delay",
-        "hard-source",
-        "additive-source",
+        "source-injection",
+        "source-index",
+        "source-waveform",
+        "boundary-type",
         "duplicate-key",
     ],
 )

@@ -92,9 +92,14 @@ static int join_path(
     return count >= 0 && (size_t)count < result_size;
 }
 
-static const char *mode_name(enum FDTD1DMode mode)
+static const char *source_name(enum FDTD1DSourceInjection injection)
 {
-    return mode == FDTD1D_HARD_PMC ? "hard-pmc" : "additive-abc";
+    return injection == FDTD1D_SOURCE_HARD ? "hard" : "additive";
+}
+
+static const char *boundary_name(enum FDTD1DBoundaryType boundary)
+{
+    return boundary == FDTD1D_BOUNDARY_PMC ? "pmc" : "mur1";
 }
 
 static const char *scale_name(enum FDTD1DScale scale)
@@ -110,28 +115,36 @@ static int write_metadata_body(
     return fprintf(
         stream,
         "{\n"
-        "  \"schema_version\": 1,\n"
-        "  \"mode\": \"%s\",\n"
+        "  \"schema_version\": 2,\n"
         "  \"scale\": \"%s\",\n"
         "  \"grid_size\": %zu,\n"
         "  \"time_steps\": %zu,\n"
         "  \"courant\": %.17g,\n"
         "  \"dx\": %.17g,\n"
         "  \"dt\": %.17g,\n"
-        "  \"source_index\": %zu,\n"
+        "  \"source\": {\n"
+        "    \"injection\": \"%s\",\n"
+        "    \"waveform\": \"gaussian\",\n"
+        "    \"index\": %zu,\n"
+        "    \"delay_steps\": %.17g,\n"
+        "    \"width_steps\": %.17g,\n"
+        "    \"amplitude\": %.17g\n"
+        "  },\n"
+        "  \"boundary\": {\n"
+        "    \"type\": \"%s\"\n"
+        "  },\n"
         "  \"probe_index\": %zu,\n"
-        "  \"source_delay\": %.17g,\n"
-        "  \"source_width\": %.17g,\n"
-        "  \"source_amplitude\": %.17g,\n"
         "  \"snapshot_interval\": %zu,\n"
         "  \"time_unit\": \"%s\",\n"
         "  \"position_unit\": \"%s\"\n"
         "}\n",
-        mode_name(config->mode), scale_name(config->scale),
+        scale_name(config->scale),
         config->grid_size, config->time_steps, config->courant,
-        config->dx, config->dt, config->source_index, config->probe_index,
-        config->source_delay, config->source_width,
-        config->source_amplitude, config->snapshot_interval,
+        config->dx, config->dt,
+        source_name(config->source.injection), config->source.index,
+        config->source.delay_steps, config->source.width_steps,
+        config->source.amplitude, boundary_name(config->boundary),
+        config->probe_index, config->snapshot_interval,
         config->scale == FDTD1D_SI ? "seconds" : "normalized",
         config->scale == FDTD1D_SI ? "meters" : "cells"
     ) >= 0;

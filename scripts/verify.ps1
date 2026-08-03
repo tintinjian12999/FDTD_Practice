@@ -100,7 +100,8 @@ try {
     }
     Invoke-InEnvironment -Conda $conda -Arguments @(
         'build\release\fdtd1d.exe',
-        '--mode', 'additive-abc',
+        '--source', 'additive',
+        '--boundary', 'mur1',
         '--scale', 'normalized',
         '--grid-size', '120',
         '--time-steps', '240',

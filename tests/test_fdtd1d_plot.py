@@ -6,9 +6,11 @@ import pytest
 
 from gui.fdtd1d_plot import ResultPlot, prepare_frames
 from scripts.visualize_fdtd1d import (
+    BoundaryMetadata,
     ProbeData,
     RunMetadata,
     SnapshotData,
+    SourceMetadata,
 )
 
 
@@ -17,8 +19,26 @@ ROOT = Path(__file__).parents[1]
 
 def sample_run() -> tuple[RunMetadata, ProbeData, SnapshotData]:
     metadata = RunMetadata(
-        1, "additive-abc", "normalized", 5, 3, 1.0, 1.0, 1.0,
-        2, 3, 1.0, 1.0, 1.0, 2, "normalized", "cells",
+        schema_version=2,
+        scale="normalized",
+        grid_size=5,
+        time_steps=3,
+        courant=1.0,
+        dx=1.0,
+        dt=1.0,
+        probe_index=3,
+        source=SourceMetadata(
+            injection="additive",
+            waveform="gaussian",
+            index=2,
+            delay_steps=1.0,
+            width_steps=1.0,
+            amplitude=1.0,
+        ),
+        boundary=BoundaryMetadata(type="mur1"),
+        snapshot_interval=2,
+        time_unit="normalized",
+        position_unit="cells",
     )
     probe = ProbeData(
         np.array([0, 1, 2]),

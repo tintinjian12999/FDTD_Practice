@@ -23,10 +23,12 @@ def test_defaults_build_normalized_command() -> None:
     parameters = default_parameters(ROOT)
     command = build_command(Path("fdtd1d.exe"), parameters)
 
-    assert command[:5] == [
+    assert command[:7] == [
         "fdtd1d.exe",
-        "--mode",
-        "additive-abc",
+        "--source",
+        "additive",
+        "--boundary",
+        "mur1",
         "--scale",
         "normalized",
     ]
@@ -52,7 +54,8 @@ def test_si_command_emits_only_si_scale_values() -> None:
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("mode", "unknown"),
+        ("source", "unknown"),
+        ("boundary", "unknown"),
         ("scale", "unknown"),
         ("grid_size", "4"),
         ("grid_size", "20.5"),
@@ -112,16 +115,23 @@ def test_inactive_scale_values_are_not_validated() -> None:
     validate_parameters(si)
 
 
-def test_mode_specific_source_rules() -> None:
-    hard = replace(
+@pytest.mark.parametrize("source", ["hard", "additive"])
+@pytest.mark.parametrize("boundary", ["pmc", "mur1"])
+def test_source_and_boundary_are_independent(
+    source: str, boundary: str
+) -> None:
+    parameters = replace(
         default_parameters(ROOT),
-        mode="hard-pmc",
-        source_index="0",
+        source=source,
+        boundary=boundary,
+        source_index="2",
     )
-    validate_parameters(hard)
 
-    with pytest.raises(ValueError):
-        validate_parameters(replace(hard, source_index="1"))
+    validate_parameters(parameters)
+    command = build_command(Path("solver.exe"), parameters)
+    assert option_value(command, "--source") == source
+    assert option_value(command, "--boundary") == boundary
+    assert "--mode" not in command
 
 
 def test_solver_discovery_precedence_and_override(tmp_path: Path) -> None:

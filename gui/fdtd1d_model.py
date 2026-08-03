@@ -19,7 +19,8 @@ OUTPUT_NAMES = (
 
 @dataclass(frozen=True)
 class SimulationParameters:
-    mode: str
+    source: str
+    boundary: str
     scale: str
     grid_size: str
     time_steps: str
@@ -37,7 +38,8 @@ class SimulationParameters:
 
 def default_parameters(root: Path) -> SimulationParameters:
     return SimulationParameters(
-        mode="additive-abc",
+        source="additive",
+        boundary="mur1",
         scale="normalized",
         grid_size="200",
         time_steps="450",
@@ -97,10 +99,8 @@ def _validate_source(
     _number(parameters.source_amplitude, "source amplitude")
     if delay < 0 or width <= 0:
         raise ValueError("source delay or width is outside its valid range")
-    if parameters.mode == "hard-pmc" and source != 0:
-        raise ValueError("hard-pmc requires source index 0")
-    if parameters.mode == "additive-abc" and not 2 <= source <= grid - 3:
-        raise ValueError("additive source is too close to a boundary")
+    if not 2 <= source <= grid - 3:
+        raise ValueError("source is too close to a boundary")
 
 
 def _validate_scale(parameters: SimulationParameters) -> None:
@@ -117,8 +117,10 @@ def _validate_scale(parameters: SimulationParameters) -> None:
 
 
 def validate_parameters(parameters: SimulationParameters) -> None:
-    if parameters.mode not in {"hard-pmc", "additive-abc"}:
-        raise ValueError("mode is invalid")
+    if parameters.source not in {"hard", "additive"}:
+        raise ValueError("source injection is invalid")
+    if parameters.boundary not in {"pmc", "mur1"}:
+        raise ValueError("boundary type is invalid")
     if parameters.scale not in {"normalized", "si"}:
         raise ValueError("scale is invalid")
     grid, _, source, _, _ = _shape_values(parameters)
@@ -135,7 +137,8 @@ def validate_parameters(parameters: SimulationParameters) -> None:
 
 def _common_arguments(parameters: SimulationParameters) -> list[str]:
     return [
-        "--mode", parameters.mode,
+        "--source", parameters.source,
+        "--boundary", parameters.boundary,
         "--scale", parameters.scale,
         "--grid-size", parameters.grid_size,
         "--time-steps", parameters.time_steps,

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Separated source injection from boundary selection across the C API, CLI,
+  schema version 2 output, strict Python loader, and desktop GUI.
+- Added all four hard/additive and PMC/Mur1 combinations, common interior-source
+  validation, a hard-source reflection warning, and legacy numerical regression
+  coverage for the default additive/Mur1 configuration.
 - Added a native Windows Tkinter GUI that configures and runs the C solver
   without duplicating the numerical implementation.
 - Added responsive background execution, owned-process cancellation, output

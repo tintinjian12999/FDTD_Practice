@@ -25,7 +25,9 @@ static int test_default_configurations(void)
     char error[256];
     struct FDTD1DConfig normalized = fdtd1d_default_normalized();
     CHECK(fdtd1d_validate_config(&normalized, error, sizeof(error)) == FDTD1D_OK);
-    CHECK(normalized.mode == FDTD1D_ADDITIVE_ABC);
+    CHECK(normalized.source.injection == FDTD1D_SOURCE_ADDITIVE);
+    CHECK(normalized.source.index == 50U);
+    CHECK(normalized.boundary == FDTD1D_BOUNDARY_MUR1);
     CHECK(normalized.scale == FDTD1D_NORMALIZED);
     CHECK(normalized.grid_size == 200U);
     CHECK(normalized.time_steps == 450U);
@@ -58,10 +60,10 @@ static int test_invalid_configurations(void)
 static int test_invalid_sources_and_courant(void)
 {
     struct FDTD1DConfig config = fdtd1d_default_normalized();
-    config.source_index = 1U;
+    config.source.index = 1U;
     CHECK(validate_fails(config));
     config = fdtd1d_default_normalized();
-    config.source_width = 0.0;
+    config.source.width_steps = 0.0;
     CHECK(validate_fails(config));
     config = fdtd1d_default_normalized();
     config.courant = 1.01;
@@ -73,14 +75,16 @@ static int test_invalid_sources_and_courant(void)
     return 0;
 }
 
-static int test_hard_source_constraints(void)
+static int test_hard_source_uses_interior_index(void)
 {
     struct FDTD1DConfig config = fdtd1d_default_normalized();
-    config.mode = FDTD1D_HARD_PMC;
-    config.source_index = 1U;
+    config.source.injection = FDTD1D_SOURCE_HARD;
+    config.source.index = 1U;
     CHECK(validate_fails(config));
-    config.source_index = 0U;
+    config.source.index = 2U;
     CHECK(!validate_fails(config));
+    config.source.index = config.grid_size - 2U;
+    CHECK(validate_fails(config));
     return 0;
 }
 
@@ -101,31 +105,60 @@ static int test_zero_initialized_state(void)
     return 0;
 }
 
-static int test_hard_source_peak(void)
+static int test_hard_source_enforces_interior_cell(void)
 {
     char error[256];
     struct FDTD1DConfig config = fdtd1d_default_normalized();
-    config.mode = FDTD1D_HARD_PMC;
-    config.source_index = 0U;
-    config.probe_index = 50U;
-    config.time_steps = 250U;
+    config.source.injection = FDTD1D_SOURCE_HARD;
+    config.source.index = 50U;
+    config.time_steps = 80U;
     struct FDTD1D *simulation =
         fdtd1d_create(&config, error, sizeof(error));
     CHECK(simulation != NULL);
 
-    double maximum = -1.0;
-    size_t peak_step = 0U;
     while (fdtd1d_step(simulation) == FDTD1D_OK) {
-        const double sample = fdtd1d_electric(simulation)[50];
-        if (sample > maximum) {
-            maximum = sample;
-            peak_step = fdtd1d_current_step(simulation);
-        }
+        const double step = (double)fdtd1d_current_step(simulation);
+        const double offset =
+            (step - config.source.delay_steps) / config.source.width_steps;
+        const double expected = config.source.amplitude * exp(-(offset * offset));
+        CHECK(fabs(fdtd1d_electric(simulation)[config.source.index] - expected)
+            <= 1.0e-12);
     }
-    CHECK(peak_step == 80U);
-    CHECK(fabs(maximum - 1.0) <= 1.0e-12);
     CHECK(fdtd1d_step(simulation) == FDTD1D_FINISHED);
     fdtd1d_destroy(simulation);
+    return 0;
+}
+
+static int test_source_boundary_combinations(void)
+{
+    const enum FDTD1DSourceInjection sources[] = {
+        FDTD1D_SOURCE_HARD,
+        FDTD1D_SOURCE_ADDITIVE,
+    };
+    const enum FDTD1DBoundaryType boundaries[] = {
+        FDTD1D_BOUNDARY_PMC,
+        FDTD1D_BOUNDARY_MUR1,
+    };
+    char error[256];
+
+    for (size_t source = 0U; source < 2U; ++source) {
+        for (size_t boundary = 0U; boundary < 2U; ++boundary) {
+            struct FDTD1DConfig config = fdtd1d_default_normalized();
+            config.source.injection = sources[source];
+            config.boundary = boundaries[boundary];
+            config.time_steps = 80U;
+            struct FDTD1D *simulation =
+                fdtd1d_create(&config, error, sizeof(error));
+            CHECK(simulation != NULL);
+            while (fdtd1d_step(simulation) == FDTD1D_OK) {
+            }
+            const double *electric = fdtd1d_electric(simulation);
+            for (size_t index = 0U; index < config.grid_size; ++index) {
+                CHECK(isfinite(electric[index]));
+            }
+            fdtd1d_destroy(simulation);
+        }
+    }
     return 0;
 }
 
@@ -171,15 +204,35 @@ static int test_normalized_si_equivalence(void)
     return 0;
 }
 
+static int test_pmc_boundary_matches_endpoint_neighbors(void)
+{
+    char error[256];
+    struct FDTD1DConfig config = fdtd1d_default_normalized();
+    config.boundary = FDTD1D_BOUNDARY_PMC;
+    config.time_steps = 160U;
+    struct FDTD1D *simulation =
+        fdtd1d_create(&config, error, sizeof(error));
+    CHECK(simulation != NULL);
+
+    while (fdtd1d_step(simulation) == FDTD1D_OK) {
+        const double *electric = fdtd1d_electric(simulation);
+        CHECK(electric[0] == electric[1]);
+        CHECK(electric[config.grid_size - 1U]
+            == electric[config.grid_size - 2U]);
+    }
+    fdtd1d_destroy(simulation);
+    return 0;
+}
+
 static int test_absorbing_boundary_residual(void)
 {
     char error[256];
     struct FDTD1DConfig config = fdtd1d_default_normalized();
     config.grid_size = 100U;
-    config.source_index = 50U;
+    config.source.index = 50U;
     config.probe_index = 50U;
     config.time_steps = 400U;
-    config.source_delay = 60.0;
+    config.source.delay_steps = 60.0;
     struct FDTD1D *simulation =
         fdtd1d_create(&config, error, sizeof(error));
     CHECK(simulation != NULL);
@@ -203,10 +256,12 @@ int main(void)
     CHECK(test_default_configurations() == 0);
     CHECK(test_invalid_configurations() == 0);
     CHECK(test_invalid_sources_and_courant() == 0);
-    CHECK(test_hard_source_constraints() == 0);
+    CHECK(test_hard_source_uses_interior_index() == 0);
     CHECK(test_zero_initialized_state() == 0);
-    CHECK(test_hard_source_peak() == 0);
+    CHECK(test_hard_source_enforces_interior_cell() == 0);
+    CHECK(test_source_boundary_combinations() == 0);
     CHECK(test_normalized_si_equivalence() == 0);
+    CHECK(test_pmc_boundary_matches_endpoint_neighbors() == 0);
     CHECK(test_absorbing_boundary_residual() == 0);
     printf("FDTD1D core tests passed.\n");
     return 0;

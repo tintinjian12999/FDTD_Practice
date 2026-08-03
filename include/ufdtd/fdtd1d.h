@@ -6,9 +6,14 @@
 #define FDTD1D_C0 299792458.0
 #define FDTD1D_ETA0 376.730313668
 
-enum FDTD1DMode {
-    FDTD1D_HARD_PMC,
-    FDTD1D_ADDITIVE_ABC
+enum FDTD1DSourceInjection {
+    FDTD1D_SOURCE_HARD,
+    FDTD1D_SOURCE_ADDITIVE
+};
+
+enum FDTD1DBoundaryType {
+    FDTD1D_BOUNDARY_PMC,
+    FDTD1D_BOUNDARY_MUR1
 };
 
 enum FDTD1DScale {
@@ -24,20 +29,25 @@ enum FDTD1DStatus {
     FDTD1D_FINISHED
 };
 
+struct FDTD1DSourceConfig {
+    enum FDTD1DSourceInjection injection;
+    size_t index;
+    double delay_steps;
+    double width_steps;
+    double amplitude;
+};
+
 struct FDTD1DConfig {
-    enum FDTD1DMode mode;
     enum FDTD1DScale scale;
+    enum FDTD1DBoundaryType boundary;
+    struct FDTD1DSourceConfig source;
     size_t grid_size;
     size_t time_steps;
-    size_t source_index;
     size_t probe_index;
     size_t snapshot_interval;
     double courant;
     double dx;
     double dt;
-    double source_delay;
-    double source_width;
-    double source_amplitude;
 };
 
 struct FDTD1D;

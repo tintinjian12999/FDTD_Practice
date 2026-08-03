@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 
 import numpy as np
+import pytest
 
 
 ROOT = Path(__file__).parents[1]
@@ -48,7 +49,8 @@ def test_help_lists_documented_options() -> None:
 
     assert result.returncode == 0
     for option in (
-        "--mode",
+        "--source",
+        "--boundary",
         "--scale",
         "--grid-size",
         "--time-steps",
@@ -61,6 +63,7 @@ def test_help_lists_documented_options() -> None:
         "--output-dir",
     ):
         assert option in result.stdout
+    assert "--mode" not in result.stdout
 
 
 def test_small_run_writes_deterministic_schemas(tmp_path: Path) -> None:
@@ -81,8 +84,38 @@ def test_small_run_writes_deterministic_schemas(tmp_path: Path) -> None:
     ]
     assert len(probe_rows) == 20
     assert len(snapshot_rows) == 4 * 20
-    assert metadata["schema_version"] == 1
+    assert metadata["schema_version"] == 2
     assert metadata["grid_size"] == 20
+    assert metadata["source"] == {
+        "injection": "additive",
+        "waveform": "gaussian",
+        "index": 5,
+        "delay_steps": 30,
+        "width_steps": 10,
+        "amplitude": 1,
+    }
+    assert metadata["boundary"] == {"type": "mur1"}
+    assert "mode" not in metadata
+
+
+@pytest.mark.parametrize("source", ["hard", "additive"])
+@pytest.mark.parametrize("boundary", ["pmc", "mur1"])
+def test_source_and_boundary_combinations_run(
+    tmp_path: Path, source: str, boundary: str
+) -> None:
+    output = tmp_path / f"{source}-{boundary}"
+    result = run_cli(
+        *small_arguments(output),
+        "--source",
+        source,
+        "--boundary",
+        boundary,
+    )
+
+    assert result.returncode == 0, result.stderr
+    metadata = json.loads((output / "run.json").read_text(encoding="utf-8"))
+    assert metadata["source"]["injection"] == source
+    assert metadata["boundary"]["type"] == boundary
 
 
 def test_snapshot_groups_contain_every_index(tmp_path: Path) -> None:
@@ -130,12 +163,47 @@ def test_equal_courant_scales_produce_equal_probe(tmp_path: Path) -> None:
     np.testing.assert_allclose(normalized_ez, si_ez, rtol=0.0, atol=1.0e-12)
 
 
+def test_default_additive_mur1_matches_legacy_numerical_reference(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "numerical-reference"
+    result = run_cli(
+        "--grid-size", 80,
+        "--time-steps", 160,
+        "--source-index", 20,
+        "--probe-index", 40,
+        "--snapshot-interval", 40,
+        "--output-dir", output,
+    )
+
+    assert result.returncode == 0, result.stderr
+    _, rows = read_csv(output / "probe.csv")
+    sample_indices = (20, 30, 40, 60, 80, 120, 159)
+    actual = np.array(
+        [float(rows[index]["ez"]) for index in sample_indices]
+    )
+    expected = np.array([
+        1.2340980408667956e-4,
+        1.101776192190951e-2,
+        2.0240793077623104e-1,
+        1.6555880341458507e-1,
+        8.729301937377009e-5,
+        4.3646509686968665e-5,
+        -4.364650968665193e-5,
+    ])
+    np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1.0e-15)
+
+
 def test_invalid_arguments_create_no_output(tmp_path: Path) -> None:
     cases = [
         ("--scale", "si", "--dx", 0.01),
         ("--scale", "normalized", "--dx", 0.01),
         ("--grid-size", 20, "--grid-size", 30),
         ("--scale", "si", "--dx", 0.01, "--dt", 1.0),
+        ("--source", "unknown"),
+        ("--boundary", "unknown"),
+        ("--source", "hard", "--source", "additive"),
+        ("--mode", "additive-abc"),
     ]
     for index, arguments in enumerate(cases):
         output = tmp_path / f"invalid-{index}"

@@ -10,20 +10,21 @@
 #include <windows.h>
 
 enum {
-    OPT_MODE = 1U << 0,
-    OPT_SCALE = 1U << 1,
-    OPT_GRID = 1U << 2,
-    OPT_STEPS = 1U << 3,
-    OPT_COURANT = 1U << 4,
-    OPT_DX = 1U << 5,
-    OPT_DT = 1U << 6,
-    OPT_SOURCE = 1U << 7,
-    OPT_PROBE = 1U << 8,
-    OPT_DELAY = 1U << 9,
-    OPT_WIDTH = 1U << 10,
-    OPT_AMPLITUDE = 1U << 11,
-    OPT_INTERVAL = 1U << 12,
-    OPT_OUTPUT = 1U << 13
+    OPT_SOURCE = 1U << 0,
+    OPT_BOUNDARY = 1U << 1,
+    OPT_SCALE = 1U << 2,
+    OPT_GRID = 1U << 3,
+    OPT_STEPS = 1U << 4,
+    OPT_COURANT = 1U << 5,
+    OPT_DX = 1U << 6,
+    OPT_DT = 1U << 7,
+    OPT_SOURCE_INDEX = 1U << 8,
+    OPT_PROBE = 1U << 9,
+    OPT_DELAY = 1U << 10,
+    OPT_WIDTH = 1U << 11,
+    OPT_AMPLITUDE = 1U << 12,
+    OPT_INTERVAL = 1U << 13,
+    OPT_OUTPUT = 1U << 14
 };
 
 typedef struct {
@@ -37,7 +38,7 @@ static void print_usage(FILE *stream)
     (void)fprintf(
         stream,
         "Usage: fdtd1d [options]\n"
-        "  --mode hard-pmc|additive-abc\n"
+        "  --source hard|additive    --boundary pmc|mur1\n"
         "  --scale normalized|si\n"
         "  --grid-size N              --time-steps N\n"
         "  --courant VALUE            --dx VALUE --dt VALUE\n"
@@ -51,7 +52,7 @@ static void print_usage(FILE *stream)
 static unsigned option_bit(const char *name)
 {
     static const char *names[] = {
-        "--mode", "--scale", "--grid-size", "--time-steps",
+        "--source", "--boundary", "--scale", "--grid-size", "--time-steps",
         "--courant", "--dx", "--dt", "--source-index",
         "--probe-index", "--source-delay", "--source-width",
         "--source-amplitude", "--snapshot-interval", "--output-dir"
@@ -98,17 +99,27 @@ static int parse_double_value(const char *text, double *value)
     return 1;
 }
 
-static int parse_mode_or_scale(
+static int parse_source_boundary_or_scale(
     CliOptions *options,
     const char *name,
     const char *value
 )
 {
-    if (strcmp(name, "--mode") == 0) {
-        if (strcmp(value, "hard-pmc") == 0) {
-            options->config.mode = FDTD1D_HARD_PMC;
-        } else if (strcmp(value, "additive-abc") == 0) {
-            options->config.mode = FDTD1D_ADDITIVE_ABC;
+    if (strcmp(name, "--source") == 0) {
+        if (strcmp(value, "hard") == 0) {
+            options->config.source.injection = FDTD1D_SOURCE_HARD;
+        } else if (strcmp(value, "additive") == 0) {
+            options->config.source.injection = FDTD1D_SOURCE_ADDITIVE;
+        } else {
+            return 0;
+        }
+        return 1;
+    }
+    if (strcmp(name, "--boundary") == 0) {
+        if (strcmp(value, "pmc") == 0) {
+            options->config.boundary = FDTD1D_BOUNDARY_PMC;
+        } else if (strcmp(value, "mur1") == 0) {
+            options->config.boundary = FDTD1D_BOUNDARY_MUR1;
         } else {
             return 0;
         }
@@ -141,7 +152,7 @@ static int parse_size_option(
     } else if (strcmp(name, "--time-steps") == 0) {
         target = &options->config.time_steps;
     } else if (strcmp(name, "--source-index") == 0) {
-        target = &options->config.source_index;
+        target = &options->config.source.index;
     } else if (strcmp(name, "--probe-index") == 0) {
         target = &options->config.probe_index;
     } else if (strcmp(name, "--snapshot-interval") == 0) {
@@ -172,11 +183,11 @@ static int parse_double_option(
     } else if (strcmp(name, "--dt") == 0) {
         target = &options->config.dt;
     } else if (strcmp(name, "--source-delay") == 0) {
-        target = &options->config.source_delay;
+        target = &options->config.source.delay_steps;
     } else if (strcmp(name, "--source-width") == 0) {
-        target = &options->config.source_width;
+        target = &options->config.source.width_steps;
     } else if (strcmp(name, "--source-amplitude") == 0) {
-        target = &options->config.source_amplitude;
+        target = &options->config.source.amplitude;
     } else {
         return -1;
     }
@@ -212,7 +223,7 @@ static int parse_option(
     const char *value
 )
 {
-    int result = parse_mode_or_scale(options, name, value);
+    int result = parse_source_boundary_or_scale(options, name, value);
 
     if (result < 0) {
         result = parse_size_option(options, name, value);
@@ -290,10 +301,6 @@ static int parse_arguments(
             return 0;
         }
         options->seen |= bit;
-    }
-    if (options->config.mode == FDTD1D_HARD_PMC
-        && (options->seen & OPT_SOURCE) == 0U) {
-        options->config.source_index = 0U;
     }
     return validate_scale_options(options, error, error_size);
 }

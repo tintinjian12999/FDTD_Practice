@@ -37,7 +37,8 @@ cmake --build --preset debug
 
 ```powershell
 .\build\debug\fdtd1d.exe `
-  --mode additive-abc `
+  --source additive `
+  --boundary mur1 `
   --scale normalized `
   --grid-size 200 `
   --time-steps 450 `
@@ -52,7 +53,8 @@ SI 單位範例：
 
 ```powershell
 .\build\debug\fdtd1d.exe `
-  --mode additive-abc `
+  --source additive `
+  --boundary mur1 `
   --scale si `
   --grid-size 200 `
   --time-steps 450 `
@@ -67,11 +69,16 @@ SI 單位範例：
 SI 模式由 \(S_c=c_0\Delta t/\Delta x\) 計算 Courant 數。兩種尺度都強制
 \(0<S_c\le1\)；不合法或矛盾的參數會在建立輸出目錄前以結束碼 2 拒絕。
 
-邊界／激發模式：
+激發注入方式與邊界條件可獨立組合：
 
-- `additive-abc`：網格內加性高斯源，兩端使用一階 Mur 吸收邊界。
-- `hard-pmc`：重現書本早期範例，在索引 0 使用硬源；另一端為 PMC 型反射
-  邊界。
+- `--source additive`：將高斯脈衝加到內部 `Ez`，返回波可穿過源位置。
+- `--source hard`：直接覆寫內部 `Ez`；此源非透明，返回波會在源位置反射。
+- `--boundary mur1`：兩端使用一階 Mur 吸收邊界。
+- `--boundary pmc`：兩端使用 PMC 型反射邊界。
+
+兩種 source 都必須位於 `2` 到 `grid_size - 3`。未指定時預設為
+`additive` + `mur1`；輸出的 `run.json` 使用 schema version 2，並將
+`source` 與 `boundary` 分開記錄。
 
 完整參數可用 `.\build\debug\fdtd1d.exe --help` 查詢。每次執行會覆寫指定
 目錄內的：
@@ -106,8 +113,9 @@ python -m gui.fdtd1d_gui
   -n ufdtd-c --no-capture-output python -m gui.fdtd1d_gui
 ```
 
-GUI 左側提供模式、尺度、網格、激發、探針與輸出目錄設定。切換尺度會只啟用
-有效的 Courant 或 `dx`/`dt` 欄位；切換 `hard-pmc` 會將源位置設為 0。
+GUI 左側提供彼此獨立的 Source、Boundary、尺度、網格、探針與輸出目錄設定。
+切換尺度會只啟用有效的 Courant 或 `dx`/`dt` 欄位；選擇 hard source 時會顯示
+非透明源警告，但不會改寫 source index。
 `Run / 執行` 會在背景呼叫同一支 C CLI，因此視窗保持可操作；`Cancel / 取消`
 只會終止 GUI 自己啟動的求解器程序。
 
@@ -139,8 +147,9 @@ target_link_libraries(my_fdtd PRIVATE ufdtd_fdtd1d)
 驗證涵蓋 Debug/Release、警告視為錯誤、CTest、pthread、四程序 MS-MPI、
 數值回歸、命令列輸出、嚴格資料驗證與圖像生成。
 
-第一版只支援一維、均勻自由空間、Gaussian 激發、單一探針，以及一階 Mur
-ABC；尚未包含介質、損耗、色散、TFSF、PML、二維／三維或獨立安裝程式。
+第一版只支援一維、均勻自由空間、Gaussian 激發、hard/additive 注入、單一
+探針，以及 PMC 或一階 Mur 邊界；尚未包含介質、損耗、色散、TFSF、PML、
+二維／三維或獨立安裝程式。
 
 ## English
 
@@ -174,7 +183,8 @@ Run the configurable normalized solver:
 
 ```powershell
 .\build\debug\fdtd1d.exe `
-  --mode additive-abc `
+  --source additive `
+  --boundary mur1 `
   --scale normalized `
   --grid-size 200 `
   --time-steps 450 `
@@ -189,9 +199,12 @@ For SI units, replace `--courant 0.9` with, for example,
 `--scale si --dx 0.01 --dt 3.002076856783368e-11`. The solver derives
 \(S_c=c_0\Delta t/\Delta x\) and requires \(0<S_c\le1\).
 
-`additive-abc` uses an interior additive Gaussian source and first-order Mur
-boundaries. `hard-pmc` places a hard source at index 0 and retains the
-reflecting boundary behavior of the early book example. Use
+Source injection and boundary behavior are independent. `--source additive`
+adds the Gaussian pulse and lets returning waves cross the source location;
+`--source hard` overwrites interior `Ez` and is non-transparent. Select either
+`--boundary mur1` for first-order absorbing boundaries or `--boundary pmc` for
+reflecting boundaries. Both source types require an index from 2 through
+`grid_size - 3`. The defaults are additive and Mur1. Use
 `.\build\debug\fdtd1d.exe --help` for every option.
 
 Each run replaces `run.json`, `probe.csv`, and `snapshots.csv` in its output
@@ -221,8 +234,10 @@ If `conda activate` is not initialized in the current PowerShell session:
   -n ufdtd-c --no-capture-output python -m gui.fdtd1d_gui
 ```
 
-The left pane exposes mode, scale, grid, source, probe, and output settings.
-Only the active normalized or SI scale fields are enabled. Run launches the
+The left pane exposes independent source and boundary choices plus scale, grid,
+probe, and output settings. Selecting a hard source displays a non-transparency
+warning without changing the source index. Only the active normalized or SI
+scale fields are enabled. Run launches the
 same C CLI on a background worker, Cancel terminates only the process owned by
 the GUI, and recognized output files require confirmation before replacement.
 
@@ -243,6 +258,6 @@ workflow with:
 ```
 
 The first solver version is limited to one-dimensional uniform free space, a
-Gaussian source, one probe, and first-order Mur ABC. Materials, loss,
-dispersion, TFSF, PML, two/three dimensions, and a standalone installer are not
-yet included.
+Gaussian hard or additive source, one probe, and PMC or first-order Mur
+boundaries. Materials, loss, dispersion, TFSF, PML, two/three dimensions, and a
+standalone installer are not yet included.

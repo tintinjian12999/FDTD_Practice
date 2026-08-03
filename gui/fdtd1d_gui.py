@@ -53,6 +53,7 @@ class FDTD1DApplication:
         self._poll_identifier: str | None = None
         self.status_text = tk.StringVar(value="Ready / 就緒")
         self.frame_text = tk.StringVar(value="Frame 0 / 0")
+        self.source_warning_text = tk.StringVar()
         self._configure_window()
         self._configure_style()
         self._build_layout()
@@ -81,6 +82,7 @@ class FDTD1DApplication:
         style.configure("Run.TButton", font=("Segoe UI", 10, "bold"))
         style.configure("Status.TLabel", foreground="#174f78")
         style.configure("Error.Status.TLabel", foreground="#a51d1d")
+        style.configure("Warning.TLabel", foreground="#9a5a00")
 
     def _build_layout(self) -> None:
         main = ttk.Panedwindow(self.root, orient=tk.HORIZONTAL)
@@ -125,32 +127,47 @@ class FDTD1DApplication:
             parent, text="Simulation / 模擬", style="Section.TLabelframe"
         )
         group.pack(fill=tk.X, pady=4)
-        ttk.Label(group, text="Mode / 模式").grid(
-            row=0, column=0, sticky=tk.W, padx=6, pady=3
-        )
-        mode = ttk.Combobox(
-            group, textvariable=self.variables["mode"],
-            values=("additive-abc", "hard-pmc"), state="readonly", width=17,
-        )
-        mode.grid(row=0, column=1, sticky=tk.EW, padx=6, pady=3)
         ttk.Label(group, text="Scale / 尺度").grid(
-            row=1, column=0, sticky=tk.W, padx=6, pady=3
+            row=0, column=0, sticky=tk.W, padx=6, pady=3
         )
         scale = ttk.Combobox(
             group, textvariable=self.variables["scale"],
             values=("normalized", "si"), state="readonly", width=17,
         )
-        scale.grid(row=1, column=1, sticky=tk.EW, padx=6, pady=3)
-        self.input_combos.extend((mode, scale))
-        self._add_entry(group, 2, "Grid size / 網格數", "grid_size")
-        self._add_entry(group, 3, "Time steps / 時間步", "time_steps")
+        scale.grid(row=0, column=1, sticky=tk.EW, padx=6, pady=3)
+        self.input_combos.append(scale)
+        self._add_entry(group, 1, "Grid size / 網格數", "grid_size")
+        self._add_entry(group, 2, "Time steps / 時間步", "time_steps")
 
     def _build_source_group(self, parent: ttk.Frame) -> None:
         group = ttk.LabelFrame(
-            parent, text="Source & Sampling / 激發與取樣",
+            parent, text="Source, Boundary & Sampling / 激發、邊界與取樣",
             style="Section.TLabelframe",
         )
         group.pack(fill=tk.X, pady=4)
+        ttk.Label(group, text="Source / 激發").grid(
+            row=0, column=0, sticky=tk.W, padx=6, pady=3
+        )
+        source = ttk.Combobox(
+            group, textvariable=self.variables["source"],
+            values=("additive", "hard"), state="readonly", width=17,
+        )
+        source.grid(row=0, column=1, sticky=tk.EW, padx=6, pady=3)
+        ttk.Label(group, text="Boundary / 邊界").grid(
+            row=1, column=0, sticky=tk.W, padx=6, pady=3
+        )
+        boundary = ttk.Combobox(
+            group, textvariable=self.variables["boundary"],
+            values=("mur1", "pmc"), state="readonly", width=17,
+        )
+        boundary.grid(row=1, column=1, sticky=tk.EW, padx=6, pady=3)
+        self.input_combos.extend((source, boundary))
+        ttk.Label(
+            group,
+            textvariable=self.source_warning_text,
+            style="Warning.TLabel",
+            wraplength=310,
+        ).grid(row=2, column=0, columnspan=2, sticky=tk.W, padx=6, pady=3)
         rows = (
             ("Source index / 源位置", "source_index"),
             ("Probe index / 探針位置", "probe_index"),
@@ -160,7 +177,7 @@ class FDTD1DApplication:
             ("Snapshot interval / 快照間隔", "snapshot_interval"),
         )
         for row, (label, name) in enumerate(rows):
-            self._add_entry(group, row, label, name)
+            self._add_entry(group, row + 3, label, name)
 
     def _build_scale_group(self, parent: ttk.Frame) -> None:
         group = ttk.LabelFrame(
@@ -252,15 +269,24 @@ class FDTD1DApplication:
 
     def _connect_events(self) -> None:
         self.variables["scale"].trace_add("write", self._scale_changed)
-        self.variables["mode"].trace_add("write", self._mode_changed)
+        self.variables["source"].trace_add("write", self._source_changed)
         self._update_scale_states()
+        self._update_source_warning()
 
     def _scale_changed(self, *_arguments: object) -> None:
         self._update_scale_states()
 
-    def _mode_changed(self, *_arguments: object) -> None:
-        if self.variables["mode"].get() == "hard-pmc":
-            self.variables["source_index"].set("0")
+    def _source_changed(self, *_arguments: object) -> None:
+        self._update_source_warning()
+
+    def _update_source_warning(self) -> None:
+        warning = (
+            "Hard source is non-transparent and can reflect returning waves. "
+            "/ Hard source 非透明，返回波會在源位置產生反射。"
+            if self.variables["source"].get() == "hard"
+            else ""
+        )
+        self.source_warning_text.set(warning)
 
     def _update_scale_states(self) -> None:
         if self._running:

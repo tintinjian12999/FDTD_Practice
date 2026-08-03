@@ -65,16 +65,19 @@ def test_visible_result_plot_exits_cleanly() -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_application_constructs_and_switches_scale_and_mode() -> None:
+def test_application_constructs_and_switches_scale_and_source() -> None:
     code = (
         "import tkinter as tk; "
         "from gui.fdtd1d_gui import FDTD1DApplication, ROOT; "
         "root=tk.Tk(); root.withdraw(); app=FDTD1DApplication(root, ROOT); "
         "app.variables['scale'].set('si'); "
-        "app.variables['mode'].set('hard-pmc'); root.update(); "
+        "original=app.variables['source_index'].get(); "
+        "app.variables['source'].set('hard'); "
+        "app.variables['boundary'].set('pmc'); root.update(); "
         "assert str(app.entries['courant'].cget('state')) == 'disabled'; "
         "assert str(app.entries['dx'].cget('state')) == 'normal'; "
-        "assert app.variables['source_index'].get() == '0'; "
+        "assert app.variables['source_index'].get() == original; "
+        "assert 'non-transparent' in app.source_warning_text.get(); "
         "app._playing=True; app.play_button.configure(text='Pause'); "
         "app._reset_playback(); assert not app._playing; "
         "assert str(app.play_button.cget('text')) == 'Play / 播放'; "

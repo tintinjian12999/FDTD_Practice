@@ -17,31 +17,47 @@ import numpy as np
 
 
 METADATA_KEYS = {
-    "schema_version", "mode", "scale", "grid_size", "time_steps",
-    "courant", "dx", "dt", "source_index", "probe_index",
-    "source_delay", "source_width", "source_amplitude",
+    "schema_version", "scale", "grid_size", "time_steps",
+    "courant", "dx", "dt", "probe_index", "source", "boundary",
     "snapshot_interval", "time_unit", "position_unit",
 }
+SOURCE_KEYS = {
+    "injection", "waveform", "index", "delay_steps", "width_steps",
+    "amplitude",
+}
+BOUNDARY_KEYS = {"type"}
 PROBE_HEADER = ["time_step", "time", "ez"]
 SNAPSHOT_HEADER = ["time_step", "time", "index", "position", "ez"]
 C0 = 299_792_458.0
 
 
 @dataclass(frozen=True)
+class SourceMetadata:
+    injection: str
+    waveform: str
+    index: int
+    delay_steps: float
+    width_steps: float
+    amplitude: float
+
+
+@dataclass(frozen=True)
+class BoundaryMetadata:
+    type: str
+
+
+@dataclass(frozen=True)
 class RunMetadata:
     schema_version: int
-    mode: str
     scale: str
     grid_size: int
     time_steps: int
     courant: float
     dx: float
     dt: float
-    source_index: int
     probe_index: int
-    source_delay: float
-    source_width: float
-    source_amplitude: float
+    source: SourceMetadata
+    boundary: BoundaryMetadata
     snapshot_interval: int
     time_unit: str
     position_unit: str
@@ -84,45 +100,67 @@ def _text(value: object, name: str) -> str:
     return value
 
 
+def _object(
+    value: object, name: str, expected_keys: set[str]
+) -> dict[str, object]:
+    if not isinstance(value, dict) or set(value) != expected_keys:
+        raise ValueError(f"{name} keys do not match schema version 2")
+    return value
+
+
 def _construct_metadata(raw: dict[str, object]) -> RunMetadata:
+    source = _object(raw["source"], "source", SOURCE_KEYS)
+    boundary = _object(raw["boundary"], "boundary", BOUNDARY_KEYS)
     return RunMetadata(
-        _integer(raw["schema_version"], "schema_version"),
-        _text(raw["mode"], "mode"),
-        _text(raw["scale"], "scale"),
-        _integer(raw["grid_size"], "grid_size"),
-        _integer(raw["time_steps"], "time_steps"),
-        _number(raw["courant"], "courant"),
-        _number(raw["dx"], "dx"),
-        _number(raw["dt"], "dt"),
-        _integer(raw["source_index"], "source_index"),
-        _integer(raw["probe_index"], "probe_index"),
-        _number(raw["source_delay"], "source_delay"),
-        _number(raw["source_width"], "source_width"),
-        _number(raw["source_amplitude"], "source_amplitude"),
-        _integer(raw["snapshot_interval"], "snapshot_interval"),
-        _text(raw["time_unit"], "time_unit"),
-        _text(raw["position_unit"], "position_unit"),
+        schema_version=_integer(raw["schema_version"], "schema_version"),
+        scale=_text(raw["scale"], "scale"),
+        grid_size=_integer(raw["grid_size"], "grid_size"),
+        time_steps=_integer(raw["time_steps"], "time_steps"),
+        courant=_number(raw["courant"], "courant"),
+        dx=_number(raw["dx"], "dx"),
+        dt=_number(raw["dt"], "dt"),
+        probe_index=_integer(raw["probe_index"], "probe_index"),
+        source=SourceMetadata(
+            injection=_text(source["injection"], "source.injection"),
+            waveform=_text(source["waveform"], "source.waveform"),
+            index=_integer(source["index"], "source.index"),
+            delay_steps=_number(
+                source["delay_steps"], "source.delay_steps"
+            ),
+            width_steps=_number(
+                source["width_steps"], "source.width_steps"
+            ),
+            amplitude=_number(source["amplitude"], "source.amplitude"),
+        ),
+        boundary=BoundaryMetadata(
+            type=_text(boundary["type"], "boundary.type")
+        ),
+        snapshot_interval=_integer(
+            raw["snapshot_interval"], "snapshot_interval"
+        ),
+        time_unit=_text(raw["time_unit"], "time_unit"),
+        position_unit=_text(raw["position_unit"], "position_unit"),
     )
 
 
 def _validate_source_metadata(metadata: RunMetadata) -> None:
-    if metadata.source_delay < 0:
+    if metadata.source.injection not in {"hard", "additive"}:
+        raise ValueError("invalid source injection")
+    if metadata.source.waveform != "gaussian":
+        raise ValueError("invalid source waveform")
+    if metadata.source.delay_steps < 0:
         raise ValueError("source delay must be nonnegative")
-    if metadata.source_width <= 0:
+    if metadata.source.width_steps <= 0:
         raise ValueError("source width must be positive")
-    if metadata.mode == "hard-pmc" and metadata.source_index != 0:
-        raise ValueError("hard-pmc requires source index 0")
-    if metadata.mode == "additive-abc" and not (
-        2 <= metadata.source_index <= metadata.grid_size - 3
-    ):
-        raise ValueError("additive source is too close to a boundary")
+    if not 2 <= metadata.source.index <= metadata.grid_size - 3:
+        raise ValueError("source is too close to a boundary")
 
 
 def _validate_metadata(metadata: RunMetadata) -> None:
-    if metadata.schema_version != 1:
+    if metadata.schema_version != 2:
         raise ValueError("unsupported metadata schema")
-    if metadata.mode not in {"hard-pmc", "additive-abc"}:
-        raise ValueError("invalid mode")
+    if metadata.boundary.type not in {"pmc", "mur1"}:
+        raise ValueError("invalid boundary type")
     if metadata.scale not in {"normalized", "si"}:
         raise ValueError("invalid scale")
     if metadata.grid_size < 5 or metadata.time_steps < 1:
@@ -135,7 +173,7 @@ def _validate_metadata(metadata: RunMetadata) -> None:
         raise ValueError("dx and dt must be positive")
     if not 0 <= metadata.probe_index < metadata.grid_size:
         raise ValueError("probe index is outside the grid")
-    if not 0 <= metadata.source_index < metadata.grid_size:
+    if not 0 <= metadata.source.index < metadata.grid_size:
         raise ValueError("source index is outside the grid")
     _validate_source_metadata(metadata)
     expected_units = (
@@ -177,7 +215,7 @@ def _load_metadata(path: Path) -> RunMetadata:
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"invalid metadata: {error}") from error
     if not isinstance(raw, dict) or set(raw) != METADATA_KEYS:
-        raise ValueError("metadata keys do not match schema version 1")
+        raise ValueError("metadata keys do not match schema version 2")
     metadata = _construct_metadata(raw)
     _validate_metadata(metadata)
     return metadata
