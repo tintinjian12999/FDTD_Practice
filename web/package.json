@@ -1,0 +1,36 @@
+{
+  "name": "ufdtd-interactive-textbook",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:all": "npm run build:wasm && npm run build",
+    "dev": "vite",
+    "build": "node scripts/verify-wasm.mjs && tsc -b && vite build",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mdx-js/react": "3.1.1",
+    "katex": "0.18.1",
+    "lucide-react": "1.28.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@mdx-js/rollup": "3.1.1",
+    "@testing-library/jest-dom": "7.0.0",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "26.1.2",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "6.0.5",
+    "jsdom": "30.0.1",
+    "rehype-katex": "7.0.1",
+    "remark-math": "6.0.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.0",
+    "vitest": "4.1.10"
+  }
+}

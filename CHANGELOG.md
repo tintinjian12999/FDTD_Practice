@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Added a 17-lesson Traditional Chinese interactive FDTD companion built with
+  React, TypeScript, MDX, KaTeX, Canvas 2D, and a Web Worker.
+- Added a narrow Emscripten adapter so native tests and the browser execute the
+  same C numerical core.
+- Added one-dimensional TFSF excitation, linear nondispersive material layers,
+  independent left/right terminations, graded matched absorbing layers, and a
+  guarded unstable-Courant lesson mode.
+- Added physical acceptance tests for TFSF leakage, Fresnel reflection, lossy
+  attenuation, absorbing-layer reflection, and native/adapter equivalence.
+- Added local progress import/export, dual code presentations, MIT/CC BY-SA
+  licensing, and GitHub Pages deployment.
 - Separated source injection from boundary selection across the C API, CLI,
   schema version 2 output, strict Python loader, and desktop GUI.
 - Added all four hard/additive and PMC/Mur1 combinations, common interior-source
