@@ -90,6 +90,23 @@ The first release supports presets for vacuum, a dielectric interface, a lossy
 slab, and an impedance-matched layer. It does not support cell-by-cell editing
 or dispersive constitutive state.
 
+In SI configurations `sigma_e` is electric conductivity in siemens per metre
+and `sigma_m` is the magnetic-loss analogue in ohms per metre. In normalized
+configurations both values are normalized loss rates. Impedance matching
+requires `sigma_e / epsilon = sigma_m / mu`; equal numeric values satisfy this
+condition only in the normalized vacuum convention.
+
+The first-release TFSF incident-field generator assumes vacuum at its two
+correction cells. First-order Mur likewise assumes vacuum at its two reference
+cells on the selected edge. Configuration validation rejects non-vacuum
+material regions at those cells instead of silently applying the wrong
+incident impedance or phase velocity.
+
+The first-release analytic TFSF generator also requires `Sc = 1`. This makes
+the half-cell incident correction exact on the one-dimensional vacuum Yee
+grid. Supporting `Sc != 1` without avoidable scattered-field leakage requires
+an auxiliary numerical incident-field grid and remains a later extension.
+
 ### Terminations
 
 Left and right terminations are independent. Each side selects:

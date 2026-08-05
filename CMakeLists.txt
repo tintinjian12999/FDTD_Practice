@@ -22,6 +22,39 @@ if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
   endif()
 endif()
 
+if(EMSCRIPTEN)
+  add_library(ufdtd_fdtd1d STATIC src/fdtd1d.c)
+  target_compile_features(ufdtd_fdtd1d PUBLIC c_std_17)
+  target_include_directories(
+    ufdtd_fdtd1d
+    PUBLIC "${PROJECT_SOURCE_DIR}/include"
+  )
+  target_link_libraries(ufdtd_fdtd1d PUBLIC ufdtd_warnings m)
+
+  add_executable(ufdtd_wasm web/wasm/fdtd1d_wasm.c)
+  target_compile_features(ufdtd_wasm PRIVATE c_std_17)
+  target_link_libraries(ufdtd_wasm PRIVATE ufdtd_fdtd1d)
+  target_link_options(
+    ufdtd_wasm
+    PRIVATE
+      --no-entry
+      -sMODULARIZE=1
+      -sEXPORT_ES6=1
+      -sEXPORT_NAME=createFDTDModule
+      -sALLOW_MEMORY_GROWTH=1
+      -sENVIRONMENT=web,worker,node
+      -sFILESYSTEM=0
+  )
+  set_target_properties(
+    ufdtd_wasm
+    PROPERTIES
+      OUTPUT_NAME fdtd1d
+      SUFFIX ".js"
+      RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/web/public/wasm"
+  )
+  return()
+endif()
+
 function(add_ufdtd_smoke target source)
   add_executable(${target} ${source})
   target_compile_features(${target} PRIVATE c_std_17)
@@ -129,6 +162,15 @@ add_executable(fdtd1d_experiment_tests tests/c/test_fdtd1d_experiment.c)
 target_compile_features(fdtd1d_experiment_tests PRIVATE c_std_17)
 target_link_libraries(fdtd1d_experiment_tests PRIVATE ufdtd_fdtd1d)
 add_test(NAME fdtd1d_experiment_tests COMMAND fdtd1d_experiment_tests)
+
+add_executable(
+  fdtd1d_wasm_tests
+  tests/c/test_fdtd1d_wasm.c
+  web/wasm/fdtd1d_wasm.c
+)
+target_compile_features(fdtd1d_wasm_tests PRIVATE c_std_17)
+target_link_libraries(fdtd1d_wasm_tests PRIVATE ufdtd_fdtd1d)
+add_test(NAME fdtd1d_wasm_tests COMMAND fdtd1d_wasm_tests)
 
 add_executable(
   fdtd1d

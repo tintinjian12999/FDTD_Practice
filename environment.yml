@@ -5,6 +5,7 @@ channels:
 dependencies:
   - gcc=15.2
   - gcc_win-64=15.2
+  - emscripten=3.1.58
   - cmake>=4.4,<5
   - ninja>=1.13,<2
   - msmpi=10.1.1

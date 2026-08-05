@@ -27,6 +27,14 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "wasm",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -37,6 +45,11 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "wasm",
+      "configurePreset": "wasm",
+      "targets": ["ufdtd_wasm"]
     }
   ],
   "testPresets": [

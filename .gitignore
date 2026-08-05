@@ -13,3 +13,8 @@ ufdtd.pdf
 .idea/
 .DS_Store
 Thumbs.db
+web/public/wasm/fdtd1d.js
+web/public/wasm/fdtd1d.wasm
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo

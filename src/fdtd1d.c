@@ -282,6 +282,60 @@ static enum FDTD1DStatus validate_materials(
     return FDTD1D_OK;
 }
 
+static int material_is_vacuum(
+    const struct FDTD1DMaterialConfig *material
+)
+{
+    return material->epsilon_r == 1.0
+        && material->mu_r == 1.0
+        && material->sigma_e == 0.0
+        && material->sigma_m == 0.0;
+}
+
+static int region_intersects(
+    const struct FDTD1DMaterialRegion *region,
+    size_t start,
+    size_t end
+)
+{
+    return region->start_index < end && region->end_index > start;
+}
+
+static enum FDTD1DStatus validate_reference_cells(
+    const struct FDTD1DExperimentConfig *config,
+    char *error,
+    size_t error_size
+)
+{
+    for (size_t index = 0U; index < config->material_count; ++index) {
+        const struct FDTD1DMaterialRegion *region = &config->materials[index];
+        if (material_is_vacuum(&region->material)) {
+            continue;
+        }
+        if (config->left_termination.type == FDTD1D_TERMINATION_MUR1
+            && region_intersects(region, 0U, 2U)) {
+            return invalid(error, error_size,
+                "Mur1 requires vacuum at the left reference cells");
+        }
+        if (config->right_termination.type == FDTD1D_TERMINATION_MUR1
+            && region_intersects(
+                region, config->domain.grid_size - 2U,
+                config->domain.grid_size
+            )) {
+            return invalid(error, error_size,
+                "Mur1 requires vacuum at the right reference cells");
+        }
+        if (config->excitation.type == FDTD1D_EXCITATION_TFSF) {
+            const size_t seam = config->excitation.tfsf.seam_index;
+            if (region_intersects(region, seam - 1U, seam + 1U)) {
+                return invalid(error, error_size,
+                    "TFSF requires vacuum at its correction cells");
+            }
+        }
+    }
+    return FDTD1D_OK;
+}
+
 static struct FDTD1DConfig legacy_config_from_experiment(
     const struct FDTD1DExperimentConfig *experiment
 )
@@ -337,6 +391,15 @@ enum FDTD1DStatus fdtd1d_validate_experiment(
     if (config == NULL) {
         return invalid(error, error_size, "experiment must not be null");
     }
+    if (config->domain.grid_size < 5U) {
+        return invalid(error, error_size, "grid_size must be at least 5");
+    }
+    if (config->domain.time_steps == 0U
+        || config->observation.snapshot_interval == 0U
+        || config->observation.probe_index >= config->domain.grid_size) {
+        return invalid(error, error_size,
+            "observation and time-step values are outside the grid");
+    }
     const enum FDTD1DStatus material_status =
         validate_materials(config, error, error_size);
     if (material_status != FDTD1D_OK) {
@@ -358,6 +421,14 @@ enum FDTD1DStatus fdtd1d_validate_experiment(
             return invalid(error, error_size,
                 "TFSF Gaussian values are invalid");
         }
+        const double incident_courant = config->domain.scale == FDTD1D_SI
+            ? FDTD1D_C0 * config->domain.dt / config->domain.dx
+            : config->domain.courant;
+        if (!isfinite(incident_courant)
+            || fabs(incident_courant - 1.0) > 1.0e-12) {
+            return invalid(error, error_size,
+                "analytic TFSF excitation requires Courant number 1");
+        }
     } else if (config->excitation.type != FDTD1D_EXCITATION_POINT) {
         return invalid(error, error_size, "excitation type is invalid");
     }
@@ -371,6 +442,10 @@ enum FDTD1DStatus fdtd1d_validate_experiment(
             error, error_size
         );
     }
+    if (termination_status != FDTD1D_OK) {
+        return termination_status;
+    }
+    termination_status = validate_reference_cells(config, error, error_size);
     if (termination_status != FDTD1D_OK) {
         return termination_status;
     }

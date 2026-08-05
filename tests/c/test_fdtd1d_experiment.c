@@ -193,7 +193,7 @@ static int test_dielectric_interface_matches_fresnel_reflection(void)
 
     const struct FDTD1DMaterialRegion dielectric = {
         .start_index = 150U,
-        .end_index = vacuum.domain.grid_size,
+        .end_index = vacuum.domain.grid_size - 3U,
         .material = {
             .epsilon_r = 4.0,
             .mu_r = 1.0,
@@ -269,7 +269,7 @@ static double measure_right_termination_reflection(
         fdtd1d_default_experiment_normalized();
     config.domain.grid_size = 300U;
     config.domain.time_steps = 560U;
-    config.domain.courant = 0.9;
+    config.domain.courant = 1.0;
     config.observation.probe_index = probe;
     config.excitation.type = FDTD1D_EXCITATION_TFSF;
     config.excitation.tfsf.direction = FDTD1D_PROPAGATE_RIGHT;
@@ -377,7 +377,7 @@ static int test_matched_lossy_medium_matches_analytic_attenuation(void)
 
     const struct FDTD1DMaterialRegion lossy = {
         .start_index = material_start,
-        .end_index = vacuum.domain.grid_size,
+        .end_index = vacuum.domain.grid_size - 3U,
         .material = {
             .epsilon_r = 1.0,
             .mu_r = 1.0,
@@ -422,6 +422,40 @@ static int test_matched_lossy_medium_matches_analytic_attenuation(void)
     CHECK(fabs(measured - expected) < 0.025);
     fdtd1d_destroy(reference);
     fdtd1d_destroy(simulation);
+    return 0;
+}
+
+static int test_tfsf_and_mur_reject_nonvacuum_reference_cells(void)
+{
+    char error[256];
+    struct FDTD1DExperimentConfig config =
+        fdtd1d_default_experiment_normalized();
+    config.excitation.type = FDTD1D_EXCITATION_TFSF;
+    config.excitation.tfsf.direction = FDTD1D_PROPAGATE_RIGHT;
+    config.excitation.tfsf.seam_index = 50U;
+    config.excitation.tfsf.gaussian.delay_steps = 40.0;
+    config.excitation.tfsf.gaussian.width_steps = 10.0;
+    config.excitation.tfsf.gaussian.amplitude = 1.0;
+    struct FDTD1DMaterialRegion material = {
+        .start_index = 49U,
+        .end_index = 80U,
+        .material = {4.0, 1.0, 0.0, 0.0}
+    };
+    config.materials = &material;
+    config.material_count = 1U;
+    CHECK(fdtd1d_validate_experiment(&config, error, sizeof(error))
+        == FDTD1D_INVALID_ARGUMENT);
+
+    material.start_index = 100U;
+    material.end_index = config.domain.grid_size;
+    CHECK(fdtd1d_validate_experiment(&config, error, sizeof(error))
+        == FDTD1D_INVALID_ARGUMENT);
+
+    config.materials = NULL;
+    config.material_count = 0U;
+    config.domain.courant = 0.9;
+    CHECK(fdtd1d_validate_experiment(&config, error, sizeof(error))
+        == FDTD1D_INVALID_ARGUMENT);
     return 0;
 }
 
@@ -476,5 +510,6 @@ int main(void)
     CHECK(test_matched_layer_reduces_outer_wall_reflection() == 0);
     CHECK(test_unstable_courant_requires_guard_and_stops_at_limit() == 0);
     CHECK(test_matched_lossy_medium_matches_analytic_attenuation() == 0);
+    CHECK(test_tfsf_and_mur_reject_nonvacuum_reference_cells() == 0);
     return 0;
 }
