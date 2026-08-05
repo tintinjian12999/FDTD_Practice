@@ -125,6 +125,11 @@ target_compile_features(fdtd1d_core_tests PRIVATE c_std_17)
 target_link_libraries(fdtd1d_core_tests PRIVATE ufdtd_fdtd1d)
 add_test(NAME fdtd1d_core_tests COMMAND fdtd1d_core_tests)
 
+add_executable(fdtd1d_experiment_tests tests/c/test_fdtd1d_experiment.c)
+target_compile_features(fdtd1d_experiment_tests PRIVATE c_std_17)
+target_link_libraries(fdtd1d_experiment_tests PRIVATE ufdtd_fdtd1d)
+add_test(NAME fdtd1d_experiment_tests COMMAND fdtd1d_experiment_tests)
+
 add_executable(
   fdtd1d
   apps/fdtd1d_cli.c
