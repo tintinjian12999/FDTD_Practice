@@ -92,7 +92,11 @@ python -m gui.fdtd1d_gui
 
 ## 互動網站
 
-先把 C 核心編譯為 WebAssembly，再啟動 Vite：
+Windows 可直接雙擊根目錄的 `start-web.cmd`。它會啟用 `ufdtd-c`、安裝缺少的
+Node 套件、重新編譯 C/WASM，並在 Vite 就緒後開啟瀏覽器。不要直接雙擊
+`web/index.html`；React、Web Worker 與 WebAssembly 必須由 HTTP server 載入。
+
+也可以在終端手動啟動：
 
 ```powershell
 conda activate ufdtd-c
