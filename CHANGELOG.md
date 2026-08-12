@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add fixed and automatic field-axis modes with visible numeric limits.
+- Add local-impedance magnetic normalization and right/left traveling-field views.
+- Clarify dielectric-interface reflection behavior in the interactive lessons.
+
 - Added a 17-lesson Traditional Chinese interactive FDTD companion built with
   React, TypeScript, MDX, KaTeX, Canvas 2D, and a Web Worker.
 - Added a narrow Emscripten adapter so native tests and the browser execute the

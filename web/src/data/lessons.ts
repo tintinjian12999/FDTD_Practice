@@ -35,8 +35,8 @@ export const lessons: Lesson[] = [
     detail: "選擇沿 x 傳播、具有 Ez 與 Hy 分量的平面波後，兩個旋度方程縮減為一對一階偏微分方程。電場的空間差驅動磁場，磁場的空間差再驅動電場。",
     outcomes: ["辨識 Ez/Hy 的傳播方向", "說明自由空間阻抗的角色", "由一階聯立式得到波動方程"],
     equation: "\\frac{\\partial H_y}{\\partial t}=\\frac{1}{\\mu}\\frac{\\partial E_z}{\\partial x},\\qquad \\frac{\\partial E_z}{\\partial t}=\\frac{1}{\\epsilon}\\frac{\\partial H_y}{\\partial x}",
-    experiment: "播放一步並同時觀察青色 Ez 與橙色 η₀Hy；確認右行波的兩條曲線近似同相。",
-    caution: "Hy 的圖形乘上 η₀只是為了共同比例顯示，不是修改物理場。",
+    experiment: "選擇方向分解，確認右行波集中在 E→；回到場模式，比較 η(x)Hy 與 η₀Hy。",
+    caution: "依本程式的場方向慣例，右行波滿足 H_y=-E_z/η。Hy 的圖形乘上阻抗只是共同比例顯示，不是修改物理場。",
   },
   {
     id: "yee-grid",
@@ -197,8 +197,8 @@ export const lessons: Lesson[] = [
     detail: "本實作使用有序、不重疊的材料 layer stack，未覆蓋格點視為真空。對 εr=4、μr=1 的法向入射，折射率為 2，電場反射係數幅值為 1/3。",
     outcomes: ["由 εr、μr 算速度與阻抗", "預測反射係數符號", "辨識離散介面位置"],
     equation: "\\Gamma_E=\\frac{\\eta_2-\\eta_1}{\\eta_2+\\eta_1},\\qquad \\eta=\\eta_0\\sqrt{\\mu_r/\\epsilon_r}",
-    experiment: "套用 dielectric preset；觀察入射、負號反射與介質內較慢的傳輸波。",
-    caution: "材料格數太少時，幾何與波長都欠解析；穩定並不等於介面結果已收斂。",
+    experiment: "套用 dielectric preset、固定 Y 軸並切到 E→/E←；分辨前界面反射、介質內後界面反射與穿透波。",
+    caution: "η₀Hy 在 εr=4、μr=1 介質內會是局部 η(x)Hy 的兩倍；自動 Y 軸也會放大小波包。定量比較請使用固定尺度與 probe。",
   },
   {
     id: "loss-pml",

@@ -1,25 +1,24 @@
 import { useEffect, useRef } from "react";
+import {
+  decomposeTravelingFields,
+  normalizeMagneticField,
+  resolveVerticalLimit,
+  type MagneticNormalization,
+  type VerticalScaleMode,
+} from "../simulation/fieldMath";
 import type { SimulationConfig, SimulationSnapshot } from "../simulation/types";
+
+export type FieldTraceMode = "fields" | "directional";
 
 interface FieldCanvasProps {
   config: SimulationConfig;
   snapshot: SimulationSnapshot | null;
   history: Float64Array[];
   waterfall: boolean;
-}
-
-const ETA0 = 376.730313668;
-
-function fieldMaximum(snapshot: SimulationSnapshot): number {
-  let maximum = 1e-6;
-  for (let index = 0; index < snapshot.electric.length; index += 1) {
-    maximum = Math.max(
-      maximum,
-      Math.abs(snapshot.electric[index]),
-      Math.abs(snapshot.magnetic[index] * ETA0),
-    );
-  }
-  return maximum;
+  traceMode: FieldTraceMode;
+  magneticNormalization: MagneticNormalization;
+  verticalScaleMode: VerticalScaleMode;
+  fixedVerticalLimit: number;
 }
 
 function drawLine(
@@ -29,21 +28,50 @@ function drawLine(
   center: number,
   scale: number,
   color: string,
-  multiplier = 1,
+  dash: number[] = [],
 ): void {
   context.beginPath();
   for (let index = 0; index < field.length; index += 1) {
     const x = (index / Math.max(1, field.length - 1)) * width;
-    const y = center - field[index] * multiplier * scale;
+    const y = center - field[index] * scale;
     if (index === 0) context.moveTo(x, y);
     else context.lineTo(x, y);
   }
   context.strokeStyle = color;
   context.lineWidth = 2;
+  context.setLineDash(dash);
   context.stroke();
+  context.setLineDash([]);
 }
 
-export function FieldCanvas({ config, snapshot, history, waterfall }: FieldCanvasProps) {
+function drawVerticalScale(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  limit: number,
+  mode: VerticalScaleMode,
+): void {
+  const center = height / 2;
+  const verticalSpan = height * 0.38;
+  context.fillStyle = "rgba(181, 209, 201, 0.68)";
+  context.font = "10px ui-monospace, monospace";
+  context.textAlign = "right";
+  context.fillText(`+${limit.toFixed(2)}`, width - 8, center - verticalSpan - 5);
+  context.fillText("0", width - 8, center - 5);
+  context.fillText(`-${limit.toFixed(2)} · ${mode}`, width - 8, center + verticalSpan + 12);
+  context.textAlign = "left";
+}
+
+export function FieldCanvas({
+  config,
+  snapshot,
+  history,
+  waterfall,
+  traceMode,
+  magneticNormalization,
+  verticalScaleMode,
+  fixedVerticalLimit,
+}: FieldCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -118,10 +146,46 @@ export function FieldCanvas({ config, snapshot, history, waterfall }: FieldCanva
         context.lineTo(width, center);
         context.stroke();
         if (snapshot) {
-          const maximum = fieldMaximum(snapshot);
-          const scale = (height * 0.38) / maximum;
-          drawLine(context, snapshot.magnetic, width, center, scale, "#ffad5c", ETA0);
-          drawLine(context, snapshot.electric, width, center, scale, "#36e0c0");
+          let traces: Float64Array[];
+          if (traceMode === "fields") {
+            traces = [
+              snapshot.electric,
+              normalizeMagneticField(
+                snapshot.magnetic,
+                config.materials,
+                magneticNormalization,
+              ),
+            ];
+          } else {
+            const { rightGoing, leftGoing } = decomposeTravelingFields(
+                snapshot.electric,
+                snapshot.magnetic,
+                config.materials,
+            );
+            traces = [rightGoing, leftGoing];
+          }
+          const limit = resolveVerticalLimit(
+            traces,
+            verticalScaleMode,
+            fixedVerticalLimit,
+          );
+          const scale = (height * 0.38) / limit;
+          if (traceMode === "fields") {
+            drawLine(context, traces[1], width, center, scale, "#ffad5c");
+            drawLine(context, snapshot.electric, width, center, scale, "#36e0c0");
+          } else {
+            drawLine(context, traces[0], width, center, scale, "#36e0c0");
+            drawLine(context, traces[1], width, center, scale, "#ff728f", [7, 4]);
+          }
+          drawVerticalScale(context, width, height, limit, verticalScaleMode);
+        } else {
+          drawVerticalScale(
+            context,
+            width,
+            height,
+            resolveVerticalLimit([], verticalScaleMode, fixedVerticalLimit),
+            verticalScaleMode,
+          );
         }
       }
 
@@ -142,7 +206,16 @@ export function FieldCanvas({ config, snapshot, history, waterfall }: FieldCanva
     const observer = new ResizeObserver(render);
     observer.observe(canvas);
     return () => observer.disconnect();
-  }, [config, history, snapshot, waterfall]);
+  }, [
+    config,
+    fixedVerticalLimit,
+    history,
+    magneticNormalization,
+    snapshot,
+    traceMode,
+    verticalScaleMode,
+    waterfall,
+  ]);
 
   return <canvas ref={canvasRef} className="field-canvas" aria-label="FDTD electric and magnetic field animation" />;
 }

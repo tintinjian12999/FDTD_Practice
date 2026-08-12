@@ -9,6 +9,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SimulationBackend } from "../simulation/backend";
+import type {
+  MagneticNormalization,
+  VerticalScaleMode,
+} from "../simulation/fieldMath";
 import {
   defaultSimulationConfig,
   type SimulationConfig,
@@ -16,6 +20,7 @@ import {
   type Termination,
 } from "../simulation/types";
 import { FieldCanvas } from "./FieldCanvas";
+import type { FieldTraceMode } from "./FieldCanvas";
 
 const ETA0 = 376.730313668;
 const phaseNames = ["Update H", "Update E", "Apply excitation", "Apply termination"];
@@ -44,6 +49,12 @@ export function SimulationLab() {
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(3);
   const [waterfall, setWaterfall] = useState(false);
+  const [traceMode, setTraceMode] = useState<FieldTraceMode>("fields");
+  const [magneticNormalization, setMagneticNormalization] =
+    useState<MagneticNormalization>("local");
+  const [verticalScaleMode, setVerticalScaleMode] =
+    useState<VerticalScaleMode>("fixed");
+  const [fixedVerticalLimit, setFixedVerticalLimit] = useState(1);
   const [error, setError] = useState("");
   const [dirty, setDirty] = useState(false);
 
@@ -205,12 +216,32 @@ export function SimulationLab() {
       <div className="lab-grid">
         <div className="scope-panel">
           <div className="scope-toolbar">
-            <div className="legend"><span className="legend-e" /> Ez <span className="legend-h" /> η₀Hy</div>
+            {traceMode === "fields" ? (
+              <div className="legend">
+                <span className="legend-e" /> Ez
+                <span className="legend-h" />
+                {magneticNormalization === "local" ? "η(x)Hy" : "η₀Hy"}
+              </div>
+            ) : (
+              <div className="legend">
+                <span className="legend-right" /> E→
+                <span className="legend-left" /> E←
+              </div>
+            )}
             <button className={`text-button ${waterfall ? "active" : ""}`} onClick={() => setWaterfall((value) => !value)}>
               <ScanLine size={15} /> waterfall
             </button>
           </div>
-          <FieldCanvas config={appliedConfig} snapshot={snapshot} history={history} waterfall={waterfall} />
+          <FieldCanvas
+            config={appliedConfig}
+            snapshot={snapshot}
+            history={history}
+            waterfall={waterfall}
+            traceMode={traceMode}
+            magneticNormalization={magneticNormalization}
+            verticalScaleMode={verticalScaleMode}
+            fixedVerticalLimit={fixedVerticalLimit}
+          />
           <div className="metric-row">
             <div><span>Courant</span><strong className={resolvedCourant > 1 ? "danger" : ""}>{resolvedCourant.toFixed(3)}</strong></div>
             <div><span>Energy proxy</span><strong>{energy.toExponential(3)}</strong></div>
@@ -231,6 +262,54 @@ export function SimulationLab() {
         </div>
 
         <aside className="parameter-panel" aria-label="Simulation parameters">
+          <div className="control-group">
+            <span className="control-title">DISPLAY</span>
+            <label>Trace view
+              <select value={traceMode} onChange={(event) => setTraceMode(event.target.value as FieldTraceMode)}>
+                <option value="fields">Ez / Hy fields</option>
+                <option value="directional">E→ / E← directions</option>
+              </select>
+            </label>
+            <label>Magnetic normalization
+              <select
+                value={magneticNormalization}
+                disabled={traceMode === "directional"}
+                onChange={(event) => setMagneticNormalization(event.target.value as MagneticNormalization)}
+              >
+                <option value="local">η(x)Hy · local impedance</option>
+                <option value="vacuum">η₀Hy · vacuum reference</option>
+              </select>
+            </label>
+            <div className="segmented">
+              {(["fixed", "auto"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  className={verticalScaleMode === mode ? "active" : ""}
+                  onClick={() => setVerticalScaleMode(mode)}
+                >
+                  {mode === "fixed" ? "Fixed Y" : "Auto Y"}
+                </button>
+              ))}
+            </div>
+            <label>Fixed |Y|max
+              <input
+                type="number"
+                min="0.05"
+                step="0.05"
+                value={fixedVerticalLimit}
+                disabled={verticalScaleMode === "auto"}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value)) setFixedVerticalLimit(Math.max(0.05, value));
+                }}
+              />
+            </label>
+            <p className="control-note">
+              Directional fields use local η(x): E→=(E−ηH)/2, E←=(E+ηH)/2.
+              Yee-grid staggering makes interface samples qualitative; use probes for coefficients.
+            </p>
+          </div>
+
           <div className="control-group">
             <span className="control-title">EXCITATION</span>
             <label>類型

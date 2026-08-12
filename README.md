@@ -114,7 +114,8 @@ npm test
 npm run build
 ```
 
-網站包含 17 節原創學習路徑、即時 `Ez/Hy` 動畫、waterfall、完整步與分相
+網站包含 17 節原創學習路徑、即時 `Ez/Hy` 動畫、固定或自動縱軸、局部或
+真空阻抗磁場正規化、`E→/E←` 方向分解、waterfall、完整步與分相
 步進、source/material/termination 控制、能量與 probe 指標，以及只保存在
 瀏覽器的進度。進度可以匯出或匯入 JSON；沒有帳號、伺服器資料庫或遙測。
 
