@@ -93,6 +93,53 @@ h1 { margin: 20px 0 16px; max-width: 820px; color: var(--text); font-size: clamp
 .experiment-brief .caution { padding-left: 20px; border-left: 1px solid var(--line); }
 .experiment-brief .caution strong { display: block; margin-bottom: 5px; color: var(--amber); font: 600 10px var(--mono); letter-spacing: .1em; }
 
+.lesson-content { margin-top: 68px; }
+.lesson-content h2 { margin: 8px 0 16px; color: var(--text); font-size: 25px; line-height: 1.3; letter-spacing: -.025em; }
+.lesson-content p, .lesson-content li { color: #afc2bc; font-size: 15px; line-height: 1.8; }
+.lesson-content ul, .lesson-content ol { margin: 12px 0 0; padding-left: 22px; }
+.lesson-content li + li { margin-top: 8px; }
+.learning-map { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.learning-map > div { min-width: 0; padding: 28px; }
+.learning-map > div + div { border-left: 1px solid var(--line); background: linear-gradient(145deg, rgba(54, 224, 192, .07), rgba(255,255,255,.01)); }
+.learning-map > div > svg { float: right; color: var(--mint); }
+.learning-map ul { margin-bottom: 0; }
+.concept-sequence { margin-top: 48px; }
+.concept-block { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 24px; padding: 42px 0; border-top: 1px solid var(--line); }
+.concept-block:last-child { border-bottom: 1px solid var(--line); }
+.concept-index { color: var(--mint); font: 500 13px var(--mono); }
+.concept-block p { max-width: 870px; margin: 12px 0 0; }
+.concept-bullets { max-width: 850px; padding: 18px 22px 18px 40px !important; border: 1px solid var(--line); background: var(--surface); }
+.worked-example, .guided-experiment, .misconceptions, .self-checks { margin-top: 48px; }
+.worked-example { padding: 28px; border: 1px solid rgba(241, 208, 106, .28); background: rgba(241, 208, 106, .035); }
+.worked-example-grid, .experiment-grid, .misconception-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 22px; background: var(--line); }
+.worked-example-grid > div, .experiment-grid > div, .misconception-grid > div { min-width: 0; padding: 22px; background: var(--surface); }
+.worked-example-grid strong, .experiment-grid strong, .experiment-goal strong, .worked-result strong { display: block; margin-bottom: 8px; color: var(--gold); font: 600 10px var(--mono); letter-spacing: .1em; }
+.worked-result { display: flex; align-items: flex-start; gap: 10px; margin: 18px 0 0; padding: 16px 18px; background: rgba(54, 224, 192, .08); }
+.worked-result svg { flex: 0 0 auto; margin-top: 5px; color: var(--mint); }
+.worked-result strong { color: var(--mint); }
+.code-bridge { display: grid; grid-template-columns: minmax(230px, .75fr) minmax(0, 1.25fr); gap: 28px; align-items: start; margin-top: 48px; padding: 30px; border: 1px solid var(--line); background: var(--surface); }
+.code-bridge > div > svg { color: var(--mint); margin-bottom: 15px; }
+.code-bridge p { margin-bottom: 0; }
+.code-bridge pre { min-width: 0; overflow: auto; margin: 0; padding: 22px; border-left: 2px solid var(--mint); background: #06100e; color: #c9d8d3; font: 12px/1.7 var(--mono); tab-size: 4; }
+.guided-experiment { border-top: 1px solid rgba(54, 224, 192, .25); padding-top: 30px; }
+.guided-experiment-heading, .self-checks > div:first-child { display: flex; align-items: flex-start; gap: 13px; }
+.guided-experiment-heading svg, .self-checks > div:first-child svg { flex: 0 0 auto; margin-top: 3px; color: var(--mint); }
+.guided-experiment-heading h2, .self-checks > div:first-child h2 { margin-top: 4px; }
+.experiment-goal { margin: 0; padding: 18px 20px; border-left: 2px solid var(--gold); background: rgba(241, 208, 106, .035); }
+.experiment-goal strong { display: inline; margin-right: 12px; }
+.experiment-grid { margin-top: 1px; }
+.misconceptions { padding-top: 30px; border-top: 1px solid var(--line); }
+.misconception-grid > div { border-top: 2px solid var(--danger); }
+.misconception-grid strong { color: #ffc0b4; font-size: 14px; line-height: 1.55; }
+.misconception-grid p { margin: 11px 0 0; font-size: 13px; }
+.self-checks { padding: 28px; border: 1px solid var(--line); background: var(--surface); }
+.self-checks details { border-top: 1px solid var(--line); }
+.self-checks details:last-child { border-bottom: 1px solid var(--line); }
+.self-checks summary { display: flex; align-items: center; gap: 12px; padding: 17px 0; color: #c9d9d4; font-size: 14px; line-height: 1.55; cursor: pointer; list-style: none; }
+.self-checks summary::-webkit-details-marker { display: none; }
+.self-checks summary span { flex: 0 0 auto; display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid rgba(54, 224, 192, .38); color: var(--mint); font: 10px var(--mono); }
+.self-checks details p { margin: 0; padding: 0 0 20px 36px; font-size: 13px; }
+
 .lab-shell { margin-top: 55px; padding: 28px; border: 1px solid rgba(54, 224, 192, .18); background: #091512; box-shadow: 0 30px 80px rgba(0,0,0,.22); }
 .lab-heading, .code-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
 .lab-heading h2, .code-heading h2 { margin-bottom: 0; }
@@ -175,6 +222,9 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 25px
   .outcome-card { max-width: none; }
   .experiment-brief { grid-template-columns: 30px 1fr; }
   .experiment-brief .caution { grid-column: 2; padding: 15px 0 0; border-left: 0; border-top: 1px solid var(--line); }
+  .learning-map, .code-bridge { grid-template-columns: 1fr; }
+  .learning-map > div + div { border-top: 1px solid var(--line); border-left: 0; }
+  .worked-example-grid, .experiment-grid, .misconception-grid { grid-template-columns: 1fr; }
   .field-canvas { height: 330px; }
 }
 
@@ -183,6 +233,13 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 25px
   .lesson-article { padding-top: 48px; }
   h1 { font-size: 42px; }
   .hero-actions { align-items: flex-start; flex-direction: column; }
+  .lesson-content { margin-top: 48px; }
+  .learning-map > div, .worked-example, .code-bridge, .self-checks { padding: 20px; }
+  .concept-block { grid-template-columns: 1fr; gap: 10px; padding: 32px 0; }
+  .concept-index { padding-bottom: 8px; border-bottom: 1px solid rgba(54, 224, 192, .22); }
+  .lesson-content p, .lesson-content li { font-size: 14px; }
+  .equation { margin: 22px 0; padding: 16px 10px; }
+  .self-checks details p { padding-left: 0; }
   .lab-shell { width: 100%; padding: 16px 0; border-left: 0; border-right: 0; }
   .lab-heading { align-items: flex-start; flex-direction: column; padding: 0 16px; }
   .solver-state { max-width: 100%; text-align: left; }

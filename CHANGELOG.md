@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Expand all 17 web lessons into a beginner-ready sequence with prerequisites,
+  concept explanations, worked examples, equation-to-C bridges, guided
+  experiments, misconception corrections, and self-check answers.
 - Add fixed and automatic field-axis modes with visible numeric limits.
 - Add local-impedance magnetic normalization and right/left traveling-field views.
 - Clarify dielectric-interface reflection behavior in the interactive lessons.

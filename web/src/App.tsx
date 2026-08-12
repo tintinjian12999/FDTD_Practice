@@ -1,12 +1,9 @@
-import katex from "katex";
 import {
-  BookOpen,
   Check,
   ChevronLeft,
   ChevronRight,
   Code2,
   Download,
-  FlaskConical,
   GitBranch,
   Menu,
   Upload,
@@ -14,8 +11,10 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import "katex/dist/katex.min.css";
+import { LessonContent } from "./components/LessonContent";
 import { SimulationLab } from "./components/SimulationLab";
 import Orientation from "./content/Orientation.mdx";
+import { lessonDetails } from "./data/lessonDetails";
 import { lessons } from "./data/lessons";
 import { parseProgress, PROGRESS_KEY, serializeProgress } from "./progress";
 
@@ -44,12 +43,6 @@ while (fdtd1d_step(simulation) == FDTD1D_OK) {
 }
 fdtd1d_destroy(simulation);`;
 
-function Equation({ value }: { value: string }) {
-  return <div className="equation" dangerouslySetInnerHTML={{
-    __html: katex.renderToString(value, { displayMode: true, throwOnError: false }),
-  }} />;
-}
-
 function downloadText(filename: string, content: string) {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
@@ -66,6 +59,7 @@ export default function App() {
   const importRef = useRef<HTMLInputElement>(null);
   const activeIndex = Math.max(0, lessons.findIndex((lesson) => lesson.id === activeId));
   const lesson = lessons[activeIndex];
+  const lessonDetail = lessonDetails[lesson.id];
 
   useEffect(() => {
     localStorage.setItem(PROGRESS_KEY, serializeProgress({
@@ -151,26 +145,11 @@ export default function App() {
             </div>
           </div>
 
-          <div className="lesson-columns">
-            <section>
-              <span className="section-kicker">CONCEPT</span>
-              <h2>這一步在算什麼</h2>
-              <p>{lesson.detail}</p>
-              {lesson.equation && <Equation value={lesson.equation} />}
-              {lesson.number === 1 && <div className="mdx-note"><Orientation /></div>}
-            </section>
-            <aside className="outcome-card">
-              <BookOpen size={20} />
-              <span className="section-kicker">AFTER THIS LESSON</span>
-              <ul>{lesson.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}</ul>
-            </aside>
-          </div>
-
-          <div className="experiment-brief">
-            <FlaskConical />
-            <div><span className="section-kicker">MEASURE, DON'T GUESS</span><h3>本節實驗</h3><p>{lesson.experiment}</p></div>
-            <p className="caution"><strong>判讀界線</strong>{lesson.caution}</p>
-          </div>
+          <LessonContent
+            detail={lessonDetail}
+            outcomes={lesson.outcomes}
+            orientation={lesson.number === 1 ? <Orientation /> : undefined}
+          />
         </article>
 
         <SimulationLab />

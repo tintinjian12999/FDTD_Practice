@@ -114,10 +114,13 @@ npm test
 npm run build
 ```
 
-網站包含 17 節原創學習路徑、即時 `Ez/Hy` 動畫、固定或自動縱軸、局部或
-真空阻抗磁場正規化、`E→/E←` 方向分解、waterfall、完整步與分相
-步進、source/material/termination 控制、能量與 probe 指標，以及只保存在
-瀏覽器的進度。進度可以匯出或匯入 JSON；沒有帳號、伺服器資料庫或遙測。
+網站包含 17 節原創學習路徑。每一節都以先備知識、分段觀念、完整算例、
+方程式到 C 程式的對照、引導實驗、常見誤解與可展開答案的自我檢核組成，
+讓沒有 FDTD 經驗的讀者也能依序學習。實驗台提供即時 `Ez/Hy` 動畫、固定或
+自動縱軸、局部或真空阻抗磁場正規化、`E→/E←` 方向分解、waterfall、完整步
+與分相步進、source/material/termination 控制、能量與 probe 指標，以及只
+保存在瀏覽器的進度。進度可以匯出或匯入 JSON；沒有帳號、伺服器資料庫或
+遙測。
 
 推送到 `main` 後，`.github/workflows/pages.yml` 會用 Emscripten 建置 C/WASM、
 執行網站測試並部署 GitHub Pages。Repository Settings → Pages 的 Source 需設為
