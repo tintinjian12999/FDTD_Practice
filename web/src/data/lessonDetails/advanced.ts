@@ -16,7 +16,7 @@ export const advancedDetails: Record<string, LessonDetail> = {
         paragraphs: [
           "大多數 update stencil 的兩個鄰居都屬於同一區，只有跨越 seam 的一個 H stencil 與一個 E stencil 混用了 total/scattered field。對缺少的 incident contribution 加回或扣除，就能維持兩側定義一致。",
         ],
-        equation: "H[s-1]\mathrel{-}=C_{H,E}E_{inc},\qquad E[s]\mathrel{+}=C_{E,H}H_{inc}",
+        equation: String.raw`H[s-1]\mathrel{-}=C_{H,E}E_{inc},\qquad E[s]\mathrel{+}=C_{E,H}H_{inc}`,
       },
       {
         title: "本版為何固定 Sc=1",
@@ -24,7 +24,7 @@ export const advancedDetails: Record<string, LessonDetail> = {
           "目前 incident Gaussian 直接用解析延遲 q-m/Sc 取樣。當 Sc=1 時，一維真空 Yee grid 的數值波速與解析波精確匹配，半格修正可把 leakage 壓到浮點誤差。",
           "Sc≠1 時主網格有數值 dispersion，解析 incident field 卻沒有；只解除 UI 鎖定會在 seam 製造假散射。要支援任意穩定 Sc，需建立使用相同 Δx、Δt 的 auxiliary 1D incident grid。",
         ],
-        equation: "E_{inc}[m,q]=\exp\left[-\left(\frac{q-m/S_c-d}{w}\right)^2\right]",
+        equation: String.raw`E_{inc}[m,q]=\exp\left[-\left(\frac{q-m/S_c-d}{w}\right)^2\right]`,
       },
     ],
     workedExample: {
@@ -66,14 +66,14 @@ ez[seam] += cezh[seam] * incident_h;`,
         paragraphs: [
           "線性、各向同性、非色散材料由 εr、μr 描述。折射率 n=√(εrμr) 決定相速度，η/η0=√(μr/εr) 決定 E/H 比。只有阻抗發生跳變時才產生法向入射反射；速度改變本身不是完整判據。",
         ],
-        equation: "v=\frac{c}{\sqrt{\epsilon_r\mu_r}},\qquad \eta=\eta_0\sqrt{\frac{\mu_r}{\epsilon_r}}",
+        equation: String.raw`v=\frac{c}{\sqrt{\epsilon_r\mu_r}},\qquad \eta=\eta_0\sqrt{\frac{\mu_r}{\epsilon_r}}`,
       },
       {
         title: "單一介面的 Fresnel 係數",
         paragraphs: [
           "電場反射係數 Γ=(η2-η1)/(η2+η1)，負號表示 Ez 極性翻轉；傳輸係數 T=2η2/(η1+η2)=1+Γ。係數是場振幅比，不是功率比；功率還要考慮兩側阻抗。",
         ],
-        equation: "\Gamma_E=\frac{\eta_2-\eta_1}{\eta_2+\eta_1},\qquad T_E=\frac{2\eta_2}{\eta_1+\eta_2}",
+        equation: String.raw`\Gamma_E=\frac{\eta_2-\eta_1}{\eta_2+\eta_1},\qquad T_E=\frac{2\eta_2}{\eta_1+\eta_2}`,
       },
       {
         title: "有限厚 slab 有兩個介面與多重回波",
@@ -81,7 +81,7 @@ ez[seam] += cezh[seam] * incident_h;`,
           "Preset 的介質有起點與終點，因此不是單一半無限介面。第一界面先產生 -1/3 反射與 2/3 透射；到達介質-真空後又產生 +1/3 的內部反射，並有 4/3 的電場傳輸係數。第一次穿過整層的 Ez 因此是 (2/3)(4/3)=8/9。",
           "介質內返回波的 Ez 是 (2/3)(1/3)=2/9。若畫 η0Hy，因 η=η0/2，橘線會是 Ez 的兩倍；必須切到 η(x)Hy 或 E→/E← 才不會把阻抗比例誤認為增益。",
         ],
-        equation: "E_{first\ pass}=T_{12}T_{23}=\frac{8}{9},\qquad E_{internal\ reflection}=T_{12}\Gamma_{23}=\frac{2}{9}",
+        equation: String.raw`E_{first\ pass}=T_{12}T_{23}=\frac{8}{9},\qquad E_{internal\ reflection}=T_{12}\Gamma_{23}=\frac{2}{9}`,
       },
     ],
     workedExample: {
@@ -129,7 +129,7 @@ chyh[m] = 1.0;`,
         paragraphs: [
           "若 σe/ε=σm/μ，複數 ε 與 μ 具有相同損耗比例，阻抗比可保持不變，同時 propagation constant 取得正 attenuation。這是本 1D matched layer 的核心。",
         ],
-        equation: "\frac{\sigma_e}{\epsilon}=\frac{\sigma_m}{\mu}",
+        equation: String.raw`\frac{\sigma_e}{\epsilon}=\frac{\sigma_m}{\mu}`,
       },
       {
         title: "漸變 profile 降低離散入口反射",
@@ -137,7 +137,7 @@ chyh[m] = 1.0;`,
           "即使連續理論阻抗匹配，離散網格上突然跳到強損耗仍可能反射。使用 σ(x)=σmax(x/d)^m 從零平滑增加，可降低第一格的離散不連續；厚度、grading order 與 target reflection 共同決定 profile。",
           "這個一維 matched lossy layer 是理解 PML 的基礎，但不是完整 2D/3D PML。高維還要處理切向與法向分量、斜入射，以及 split-field、UPML 或 CPML 形式。",
         ],
-        equation: "\sigma(x)=\sigma_{max}\left(\frac{x}{d}\right)^m",
+        equation: String.raw`\sigma(x)=\sigma_{max}\left(\frac{x}{d}\right)^m`,
       },
     ],
     workedExample: {

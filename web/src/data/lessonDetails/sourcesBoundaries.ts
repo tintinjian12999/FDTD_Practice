@@ -10,7 +10,7 @@ export const sourceBoundaryDetails: Record<string, LessonDetail> = {
           "Hard source 在 curl update 完成後直接指定 Ez[source]=g[q]。該節點原本由 Maxwell 更新得到的值會被丟棄，所以 source 對外送出的波形受到強制控制。",
           "這種做法像時間變動的 Dirichlet 條件。它適合重現最小教科書程式，也適合測試指定節點是否精確跟隨波形，但不是透明的物理天線模型。",
         ],
-        equation: "E_z^{q+1}[m_s]\leftarrow g[q]",
+        equation: String.raw`E_z^{q+1}[m_s]\leftarrow g[q]`,
       },
       {
         title: "返回波遇到 hard node 會被改寫",
@@ -64,7 +64,7 @@ simulation->ez[source_index] = value;`,
         paragraphs: [
           "Additive source 執行 Ez[source]+=g[q]，把指定激發疊加到 curl update 的結果。因此返回波仍保留在 total field 中，source node 不再是被強制固定的邊界。",
         ],
-        equation: "E_z^{q+1}[m_s]\leftarrow E_z^{q+1}[m_s]+g[q]",
+        equation: String.raw`E_z^{q+1}[m_s]\leftarrow E_z^{q+1}[m_s]+g[q]`,
       },
       {
         title: "透明不等於無散射",
@@ -120,7 +120,7 @@ ez[source] += waveform;`,
         paragraphs: [
           "一維右端 PMC 要求總 Hy 在邊界消失。入射與反射磁場必須異號相消；由於反射方向改變本來就會翻轉 E/H 的方向關係，電場反射係數為 +1。",
         ],
-        equation: "\Gamma_E^{PMC}=+1,\qquad \Gamma_H^{PMC}=-1",
+        equation: String.raw`\Gamma_E^{PMC}=+1,\qquad \Gamma_H^{PMC}=-1`,
       },
       {
         title: "它是理想校準器，不是吸收器",
@@ -172,14 +172,14 @@ ez[last] = ez[last - 1];`,
         paragraphs: [
           "一維波動算子可分解為向左與向右的一階 advection operator。右端 ABC 選擇只滿足向右行的關係，等效假設抵達邊界的波應繼續離開，而不允許未知的向左分量從域外進來。",
         ],
-        equation: "\left(\frac{\partial}{\partial x}+\frac{1}{v}\frac{\partial}{\partial t}\right)E_z=0\quad\text{at the right boundary}",
+        equation: String.raw`\left(\frac{\partial}{\partial x}+\frac{1}{v}\frac{\partial}{\partial t}\right)E_z=0\quad\text{at the right boundary}`,
       },
       {
         title: "Mur1 需要保存兩個時間層",
         paragraphs: [
           "新的邊界值由舊的內鄰居與新內鄰居共同外推，因此更新 interior 前必須先保存舊 boundary history。若先覆蓋舊值，公式仍能編譯，卻已不是 Mur1。",
         ],
-        equation: "E_N^{q+1}=E_{N-1}^{q}+\frac{S_c-1}{S_c+1}\left(E_{N-1}^{q+1}-E_N^q\right)",
+        equation: String.raw`E_N^{q+1}=E_{N-1}^{q}+\frac{S_c-1}{S_c+1}\left(E_{N-1}^{q+1}-E_N^q\right)`,
       },
       {
         title: "吸收品質取決於假設是否成立",

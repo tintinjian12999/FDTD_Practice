@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserve LaTeX command backslashes in all expanded lesson equations and add
+  strict KaTeX parsing coverage.
 - Expand all 17 web lessons into a beginner-ready sequence with prerequisites,
   concept explanations, worked examples, equation-to-C bridges, guided
   experiments, misconception corrections, and self-check answers.

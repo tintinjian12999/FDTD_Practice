@@ -9,7 +9,7 @@ export const numericsEngineeringDetails: Record<string, LessonDetail> = {
         paragraphs: [
           "Sc=cΔt/Δx 表示真空光速在一個 time step 內走過多少個 cell。FDTD stencil 每次只能把資訊傳給相鄰格點；一維顯式 Yee scheme 因此要求 Sc≤1，讓數值資訊傳遞能力不落後於模型要求。",
         ],
-        equation: "S_c=\frac{c\Delta t}{\Delta x}\le 1",
+        equation: String.raw`S_c=\frac{c\Delta t}{\Delta x}\le 1`,
       },
       {
         title: "Sc<1 不代表能量被減少",
@@ -23,7 +23,7 @@ export const numericsEngineeringDetails: Record<string, LessonDetail> = {
           "連續無色散介質中所有頻率以同一速度傳播；離散網格的相速度則依頻率與每波長格數改變。Gaussian 包含一段頻譜，網格過粗時各頻率逐漸分離，脈衝會變寬或振鈴，即使 Sc 完全穩定。",
           "一維真空在 Sc=1 是特殊情形，數值 dispersion relation 可精確匹配；加入材料、改變 Sc 或進入高維後不能延伸這個結論。",
         ],
-        equation: "\sin\left(\frac{\omega\Delta t}{2}\right)=S_c\sin\left(\frac{k\Delta x}{2}\right)",
+        equation: String.raw`\sin\left(\frac{\omega\Delta t}{2}\right)=S_c\sin\left(\frac{k\Delta x}{2}\right)`,
       },
     ],
     workedExample: {
@@ -79,7 +79,7 @@ if (courant <= 0.0 ||
         paragraphs: [
           "先找模型中最短波長，通常出現在最高關注頻率與最高折射率材料。再選每波長格數 Nλ；入門可從 20 cells/λ 開始，要求高相位精度時需做收斂分析，而不是把 20 當成普遍保證。",
         ],
-        equation: "\lambda_{min}=\frac{c}{f_{max}\sqrt{\epsilon_r\mu_r}},\qquad \Delta x\le\frac{\lambda_{min}}{N_\lambda}",
+        equation: String.raw`\lambda_{min}=\frac{c}{f_{max}\sqrt{\epsilon_r\mu_r}},\qquad \Delta x\le\frac{\lambda_{min}}{N_\lambda}`,
       },
     ],
     workedExample: {

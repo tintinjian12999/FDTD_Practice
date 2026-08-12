@@ -23,7 +23,7 @@ export const foundationDetails: Record<string, LessonDetail> = {
         paragraphs: [
           "先選一個可量測輸出，例如 probe 的到達時間或反射峰值；固定物理問題後縮小 Δx，並同步縮小 Δt 以維持相同 Courant number。若是二階離散且已進入漸近區，Δx 減半後主導誤差應約縮小四倍。",
         ],
-        equation: "e(h)\approx C h^p,\qquad \frac{e(h)}{e(h/2)}\approx 2^p",
+        equation: String.raw`e(h)\approx C h^p,\qquad \frac{e(h)}{e(h/2)}\approx 2^p`,
         bullets: ["一次只改網格尺度", "比較可量化指標，不比較截圖感覺", "至少使用三個解析度確認趨勢"],
       },
     ],
@@ -75,7 +75,7 @@ bool close = error <= absolute_tol + relative_tol * scale;`,
           "假設所有場只隨 x 改變，電場只有 z 分量 Ez，磁場只有 y 分量 Hy。Faraday 與 Ampère-Maxwell 方程便縮成兩條互相耦合的一階式：Ez 的空間差推動 Hy，Hy 的空間差再推動 Ez。",
           "這不是把電磁波簡化成單一純量，而是選定一個在均勻介質中自洽的極化。只要初始與邊界不產生其他分量，這對 Ez/Hy 可以獨立演化。",
         ],
-        equation: "\mu\frac{\partial H_y}{\partial t}=\frac{\partial E_z}{\partial x},\qquad \epsilon\frac{\partial E_z}{\partial t}=\frac{\partial H_y}{\partial x}",
+        equation: String.raw`\mu\frac{\partial H_y}{\partial t}=\frac{\partial E_z}{\partial x},\qquad \epsilon\frac{\partial E_z}{\partial t}=\frac{\partial H_y}{\partial x}`,
       },
       {
         title: "波速與阻抗是不同物理量",
@@ -83,14 +83,14 @@ bool close = error <= absolute_tol + relative_tol * scale;`,
           "波速 v=1/√(με) 決定相位移動多快；波阻抗 η=√(μ/ε) 決定同一行波中 E 與 H 的振幅比例。提高 εr 會同時降低速度與阻抗，但兩個變化不能互相替代。",
           "本程式符號慣例下，向右行波滿足 Hy=-Ez/η，向左行波滿足 Hy=+Ez/η。這正是方向分解 E→=(E-ηH)/2 與 E←=(E+ηH)/2 的來源。",
         ],
-        equation: "v=\frac{1}{\sqrt{\mu\epsilon}},\qquad \eta=\sqrt{\frac{\mu}{\epsilon}}",
+        equation: String.raw`v=\frac{1}{\sqrt{\mu\epsilon}},\qquad \eta=\sqrt{\frac{\mu}{\epsilon}}`,
       },
       {
         title: "為何 E 與 H 能自行傳播",
         paragraphs: [
           "對第一條式再取時間微分，並用第二條消去 Hy，可以得到 Ez 的二階波動方程。局部場梯度使另一個場改變，新的場又在鄰近位置建立梯度，能量因此向前傳遞，而不是由 source 每一格逐點搬運。",
         ],
-        equation: "\frac{\partial^2 E_z}{\partial x^2}-\mu\epsilon\frac{\partial^2 E_z}{\partial t^2}=0",
+        equation: String.raw`\frac{\partial^2 E_z}{\partial x^2}-\mu\epsilon\frac{\partial^2 E_z}{\partial t^2}=0`,
       },
     ],
     workedExample: {
@@ -138,7 +138,7 @@ double left_going = 0.5 * (ez + eta * hy);`,
         paragraphs: [
           "Ez 儲存在整數時間 qΔt，Hy 儲存在 (q+1/2)Δt。先用 Ez^q 算 Hy^(q+1/2)，再用新的 Hy 算 Ez^(q+1)，形成 leapfrog。兩個場彼此追趕，卻不需要解大型聯立方程。",
         ],
-        equation: "E_z^q\rightarrow H_y^{q+1/2}\rightarrow E_z^{q+1}",
+        equation: String.raw`E_z^q\rightarrow H_y^{q+1/2}\rightarrow E_z^{q+1}`,
       },
       {
         title: "端點為何不能套用 interior stencil",
@@ -188,14 +188,14 @@ for (size_t m = 1; m + 1 < size; ++m)
         paragraphs: [
           "在目標位置兩側各取半格樣本，相減後除以間距，可以消去 Taylor 展開中的偶次偏差，得到局部二階精度。FDTD 同時對時間與空間使用這個結構。",
         ],
-        equation: "f'(x_0)\approx\frac{f(x_0+\Delta/2)-f(x_0-\Delta/2)}{\Delta}+O(\Delta^2)",
+        equation: String.raw`f'(x_0)\approx\frac{f(x_0+\Delta/2)-f(x_0-\Delta/2)}{\Delta}+O(\Delta^2)`,
       },
       {
         title: "從 Maxwell 式解出未來場",
         paragraphs: [
           "把時間導數換成新舊場之差，把空間導數換成相鄰場之差，再代數移項，就得到顯式 update equation。右側只包含已知量，因此每個格點可直接更新。",
         ],
-        equation: "H_y^{q+1/2}[m]=H_y^{q-1/2}[m]+\frac{\Delta t}{\mu\Delta x}(E_z^q[m+1]-E_z^q[m])",
+        equation: String.raw`H_y^{q+1/2}[m]=H_y^{q-1/2}[m]+\frac{\Delta t}{\mu\Delta x}(E_z^q[m+1]-E_z^q[m])`,
       },
       {
         title: "係數承載尺度、材料與損耗",
@@ -252,7 +252,7 @@ ez[m] = ceze[m] * ez[m]
         paragraphs: [
           "若 Sc=1、source 位於 0、probe 位於 50，Gaussian 峰值在 source step 30 出現，probe 峰值應約在 step 80。先驗證這種單一可預測量，比一開始就製作完整動畫更容易定位錯誤。",
         ],
-        equation: "q_{arrival}\approx q_{source}+\frac{|m_{probe}-m_{source}|}{S_c}",
+        equation: String.raw`q_{arrival}\approx q_{source}+\frac{|m_{probe}-m_{source}|}{S_c}`,
       },
       {
         title: "教學版與工程版有不同責任",
